@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"getAwayBSG/configs"
+	"github.com/getAwayBSG/configs"
 	"go.mongodb.org/mongo-driver/bson"
 	"strconv"
 	"strings"

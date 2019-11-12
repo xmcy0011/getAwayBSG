@@ -3,8 +3,8 @@ package entrance
 import (
 	"encoding/json"
 	"fmt"
-	"getAwayBSG/configs"
-	"getAwayBSG/db"
+	"github.com/getAwayBSG/configs"
+	"github.com/getAwayBSG/db"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
 	"github.com/gocolly/colly/proxy"

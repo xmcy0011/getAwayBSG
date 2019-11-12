@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"getAwayBSG/configs"
-	"getAwayBSG/entrance"
+	"github.com/getAwayBSG/configs"
+	"github.com/getAwayBSG/entrance"
 )
 
 // 申明配置变量
@@ -21,7 +21,7 @@ var (
 
 func init() {
 	flag.BoolVar(&help, "help", false, "显示帮助")
-	flag.StringVar(&config, "config", "./config.yaml", "设置配置文件")
+	flag.StringVar(&config, "config", "./config.toml", "设置配置文件")
 	flag.BoolVar(&lianjia_ershou, "lianjia_ershou", false, "抓取链家二手房数据")
 	flag.BoolVar(&lianjia_zufang, "lianjia_zufang", false, "抓取链家租房数据")
 	flag.BoolVar(&zhilian, "zhilian", false, "抓取智联招聘数据")

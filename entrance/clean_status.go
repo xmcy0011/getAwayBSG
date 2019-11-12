@@ -3,8 +3,8 @@ package entrance
 import (
 	"context"
 	"fmt"
-	"getAwayBSG/configs"
-	"getAwayBSG/db"
+	"github.com/getAwayBSG/configs"
+	"github.com/getAwayBSG/db"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
