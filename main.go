@@ -2,9 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"github.com/fatih/color"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/entrance"
 	"github.com/getAwayBSG/logger"
+	"github.com/getwe/figlet4go"
 )
 
 // 申明配置变量
@@ -22,17 +25,15 @@ var (
 func init() {
 	flag.BoolVar(&help, "help", false, "显示帮助")
 	flag.StringVar(&config, "config", "./config.yaml", "设置配置文件")
-	flag.BoolVar(&lianjiaErshou, "lianjiaErshou", false, "抓取链家二手房数据")
-	flag.BoolVar(&lianjiaZufang, "lianjiaZufang", false, "抓取链家租房数据")
+	flag.BoolVar(&lianjiaErshou, "lianjia_ershou", false, "抓取链家二手房数据")
+	flag.BoolVar(&lianjiaZufang, "lianjia_zufang", false, "抓取链家租房数据")
 	flag.BoolVar(&zhilian, "zhilian", false, "抓取智联招聘数据")
-	flag.BoolVar(&clean, "clean", false, "清理缓存")
-	flag.BoolVar(&info, "info", false, "保存抓取状态")
-	flag.StringVar(&infoSaveTo, "info_save_to", "./numlog.txt", "输入状态文件保存位置")
 }
 
 func main() {
 	logger.InitLogger("log/log.log", "debug")
 	defer logger.Logger.Sync()
+	printIcon()
 
 	flag.Parse()
 	//初始化配置信息，同时输出配置信息
@@ -42,9 +43,7 @@ func main() {
 	logger.Sugar.Info(configs.Config())
 
 	//进入不同入口
-	if help {
-		flag.Usage()
-	} else if lianjiaErshou {
+	if lianjiaErshou {
 		entrance.Start_lianjia_ershou()
 	} else if lianjiaZufang {
 		entrance.Start_LianjiaZufang()
@@ -55,7 +54,32 @@ func main() {
 	} else if info {
 		entrance.Start_info(infoSaveTo)
 	} else {
+		fmt.Println("每次抓取都是全量的!")
 		flag.Usage()
 	}
+}
 
+func printIcon() {
+	appName := "getAwayBSG"
+	ascii := figlet4go.NewAsciiRender()
+	renderStr, _ := ascii.Render(appName)
+	// 黑白
+	//fmt.Println(renderStr)
+
+	colors := [...]color.Attribute{
+		color.FgMagenta,
+		color.FgYellow,
+		color.FgBlue,
+		color.FgCyan,
+		color.FgRed,
+		color.FgWhite,
+	}
+	options := figlet4go.NewRenderOptions()
+	options.FontColor = make([]color.Attribute, len(appName))
+	for i := range options.FontColor {
+		options.FontColor[i] = colors[i%len(colors)]
+	}
+	renderStr, _ = ascii.RenderOpts(appName, options)
+	// 彩色
+	fmt.Println(renderStr)
 }
