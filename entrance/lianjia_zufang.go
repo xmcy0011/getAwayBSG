@@ -2,9 +2,9 @@ package entrance
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/db"
+	"github.com/getAwayBSG/logger"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
 	"github.com/gocolly/colly/proxy"
@@ -40,7 +40,7 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 		if configInfo["proxyList"] != nil {
 			rp, err := proxy.RoundRobinProxySwitcher(proxyList...)
 			if err != nil {
-				fmt.Println(err)
+				logger.Sugar.Error(err)
 			}
 			c.SetProxyFunc(rp)
 		}
@@ -55,11 +55,11 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 		panic(err)
 	}
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("列表抓取：", r.URL.String())
+		logger.Sugar.Info("列表抓取：", r.URL.String())
 	})
 
 	c.OnHTML("title", func(element *colly.HTMLElement) {
-		fmt.Println(element.Text)
+		logger.Sugar.Info(element.Text)
 	})
 
 	c.OnHTML(".content__list--item", func(element *colly.HTMLElement) {
@@ -86,7 +86,7 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 		desc := element.ChildText(".content__list--item--des")
 		desc = strings.ReplaceAll(desc, " ", "")
 		desc = strings.ReplaceAll(desc, "\n", "")
-		fmt.Println(desc)
+		logger.Sugar.Info(desc)
 		re, _ := regexp.Compile("(\\d+)㎡/")
 		indexs := re.FindStringIndex(desc)
 		if len(indexs) == 2 {
@@ -113,7 +113,7 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 		//fmt.Println(address)
 		//fmt.Println(area)
 		//fmt.Println(cityname)
-		fmt.Println("--------------------")
+		logger.Sugar.Info("--------------------")
 
 		client := db.GetClient()
 		ctx := db.GetCtx()
@@ -132,8 +132,7 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 		})
 		if err != nil {
 			if !strings.Contains(err.Error(), "multiple write errors") {
-				fmt.Print("数据库插入失败！")
-				fmt.Println(err)
+				logger.Sugar.Error("数据库插入失败:%s", err.Error())
 			}
 		}
 
@@ -151,7 +150,7 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 
 				err = c.Visit(goUrl + "pg" + strconv.Itoa(i) + "/")
 				if err != nil && err.Error() != "URL already visited" {
-					fmt.Println(err)
+					logger.Sugar.Error(err)
 				}
 
 			}
@@ -173,7 +172,7 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 				goUrl := element.Attr("href")
 				u, err = url.Parse(goUrl)
 				if err != nil && err.Error() != "URL already visited" {
-					fmt.Println(err)
+					logger.Sugar.Error(err)
 				}
 				if u.Scheme == "" {
 					goUrl = rootUrl + u.Path
@@ -184,7 +183,7 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 				goUrl = re.ReplaceAllString(goUrl, "")
 				err = c.Visit(goUrl)
 				if err != nil && err.Error() != "URL already visited" {
-					fmt.Println(err)
+					logger.Sugar.Error(err)
 				}
 
 			})
@@ -194,7 +193,7 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 
 	err := c.Visit(cityUrl)
 	if err != nil && err.Error() != "URL already visited" {
-		fmt.Println(err)
+		logger.Sugar.Error(err)
 	}
 
 }

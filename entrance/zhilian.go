@@ -3,9 +3,9 @@ package entrance
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/db"
+	"github.com/getAwayBSG/logger"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -27,7 +27,7 @@ func Start_zhilian() {
 			for start := 0; start < total; start += 50 {
 				cityid := cityList[j].(map[string]interface{})["code"]
 				if cityid == nil {
-					fmt.Println(cityList[j])
+					logger.Sugar.Info(cityList[j])
 				}
 				icityid, err := cityid.(json.Number).Int64()
 				if err != nil {
@@ -38,13 +38,13 @@ func Start_zhilian() {
 				keyword = url.QueryEscape(keyword)
 				////apiUrl:= "https://fe-api.zhaopin.com/c/i/sou?start=" + strconv.Itoa(start) + "pageSize=" + strconv.Itoa(length) + "&cityId=" + strconv.Itoa(cityid) + "&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&sortType=publish&kw=" + keys[i].(string) + "&kt=3&_v=0.17996222&x-zp-page-request-id=e8d2c03d3c4347a9b5edffa03367d90d-1547646999572-254944"
 				apiUrl := "https://fe-api.zhaopin.com/c/i/sou?start=" + strconv.Itoa(start) + "&pageSize=" + strconv.Itoa(length) + "&cityId=" + strconv.Itoa(int(icityid)) + "&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&sortType=publish&kw=" + keyword + "&kt=3&_v=0.96788938&x-zp-page-request-id=adce992a71af4857ad9dd407cae222ff-1562161856663-558612&x-zp-client-id=f0fe8f7b-8a03-4076-9894-4389e9959954"
-				fmt.Println(apiUrl)
+				logger.Sugar.Info(apiUrl)
 				res := get(apiUrl)
 				var mapResult map[string]interface{}
 				err = json.Unmarshal([]byte(res), &mapResult)
 
 				if err != nil {
-					fmt.Println("JsonToMapDemo err: ", err)
+					logger.Sugar.Errorf("JsonToMapDemo err: ", err)
 				} else {
 					if mapResult["data"] != nil {
 						data := mapResult["data"].(map[string]interface{})
@@ -60,7 +60,7 @@ func Start_zhilian() {
 						}
 						db.AddZLItem(results)
 					} else {
-						fmt.Println("接口返回错误！")
+						logger.Sugar.Error("接口返回错误！")
 					}
 				}
 			}

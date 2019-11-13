@@ -2,8 +2,8 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"github.com/getAwayBSG/configs"
+	"github.com/getAwayBSG/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -27,14 +27,12 @@ func GetInstance() *singleton {
 		instance.ctx = ctx
 		err := client.Connect(ctx)
 		if err != nil {
-			fmt.Print("数据库连接失败！")
-			fmt.Println(err)
+			logger.Sugar.Fatalf("数据库连接失败！%s", err.Error())
 		}
 
 		err = client.Ping(ctx, readpref.Primary())
 		if err != nil {
-			fmt.Print("ping error:")
-			fmt.Println(err)
+			logger.Sugar.Fatalf("ping error:%s", err.Error())
 		}
 
 	}

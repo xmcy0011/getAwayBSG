@@ -2,9 +2,9 @@ package entrance
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/db"
+	"github.com/getAwayBSG/logger"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
 	"github.com/gocolly/colly/proxy"
@@ -45,7 +45,7 @@ func crawlerOneCity(cityUrl string) {
 		if configInfo["proxyList"] != nil {
 			rp, err := proxy.RoundRobinProxySwitcher(proxyList...)
 			if err != nil {
-				fmt.Println(err)
+				logger.Sugar.Error(err)
 			}
 			c.SetProxyFunc(rp)
 		}
@@ -60,11 +60,11 @@ func crawlerOneCity(cityUrl string) {
 		panic(err)
 	}
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("列表抓取：", r.URL.String())
+		logger.Sugar.Info("列表抓取：", r.URL.String())
 	})
 
 	c.OnHTML("title", func(element *colly.HTMLElement) {
-		fmt.Println(element.Text)
+		logger.Sugar.Info(element.Text)
 	})
 
 	c.OnHTML("body", func(element *colly.HTMLElement) {
@@ -73,7 +73,7 @@ func crawlerOneCity(cityUrl string) {
 			link := e.ChildAttr("a", "href")
 
 			title := e.ChildText("a:first-child")
-			fmt.Println(title)
+			logger.Sugar.Info(title)
 
 			price := e.ChildText(".totalPrice")
 			price = strings.Replace(price, "万", "0000", 1)
@@ -106,7 +106,7 @@ func crawlerOneCity(cityUrl string) {
 			goUrl := element.Attr("href")
 			u, err = url.Parse(goUrl)
 			if err != nil {
-				fmt.Println(err)
+				logger.Sugar.Info(err)
 			}
 			if u.Scheme == "" {
 				goUrl = rootUrl + u.Path
@@ -116,7 +116,7 @@ func crawlerOneCity(cityUrl string) {
 			re, _ := regexp.Compile("pg\\d+/*")
 			goUrl = re.ReplaceAllString(goUrl, "")
 			err = c.Visit(goUrl)
-			fmt.Println(err)
+			logger.Sugar.Info(err)
 		})
 
 		// 下一页
@@ -130,7 +130,7 @@ func crawlerOneCity(cityUrl string) {
 					gourl = re.ReplaceAllString(element.Request.URL.String(), "")
 					gourl = gourl + "pg" + strconv.Itoa(page.CurPage+1)
 					err = c.Visit(gourl)
-					fmt.Println(err)
+					logger.Sugar.Info(err)
 				}
 			}
 		})
@@ -138,7 +138,7 @@ func crawlerOneCity(cityUrl string) {
 	})
 
 	err := c.Visit(cityUrl)
-	fmt.Println(err)
+	logger.Sugar.Error(err)
 
 }
 
@@ -177,7 +177,7 @@ func crawlDetail() (sucnum int) {
 		if configInfo["proxyList"] != nil {
 			rp, err := proxy.RoundRobinProxySwitcher(proxyList...)
 			if err != nil {
-				fmt.Println(err)
+				logger.Sugar.Error(err)
 			}
 			c.SetProxyFunc(rp)
 		}
@@ -207,7 +207,7 @@ func crawlDetail() (sucnum int) {
 	})
 
 	c.OnHTML("title", func(element *colly.HTMLElement) {
-		fmt.Println(element.Text)
+		logger.Sugar.Info(element.Text)
 	})
 
 	c.OnHTML(".aroundInfo .communityName .info", func(element *colly.HTMLElement) {
@@ -236,7 +236,7 @@ func crawlDetail() (sucnum int) {
 	})
 
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("详情抓取：", r.URL.String())
+		logger.Sugar.Info("详情抓取：", r.URL.String())
 	})
 
 	client := db.GetClient()
@@ -249,14 +249,13 @@ func crawlDetail() (sucnum int) {
 	cur, err := lianjia.Find(ctx, bson.M{"zq_detail_status": 0})
 
 	if err != nil {
-		fmt.Println(err)
+		logger.Sugar.Error(err)
 	} else {
 		defer cur.Close(ctx)
 		for cur.Next(ctx) {
 			var item bson.M
 			if err := cur.Decode(&item); err != nil {
-				fmt.Print("数据库读取失败！")
-				fmt.Println(err)
+				logger.Sugar.Errorf("数据库读取失败:%s", err.Error())
 			} else {
 				sucnum++
 				c.Visit(item["Link"].(string))

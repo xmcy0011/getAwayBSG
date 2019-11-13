@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/db"
+	"github.com/getAwayBSG/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -22,11 +23,11 @@ func Start_clean() {
 	} else if strings.Index(strings.Join(os.Args, ""), "lianjia_zufang") > -1 {
 		choice = 3
 	} else {
-		fmt.Println("清除抓取状态（不清除状态的话爬虫会从上次停止位置继续抓取）")
-		fmt.Println("请选择需要清除哪个爬虫的的状态数据：（输入数字）")
-		fmt.Println("1.链家二手房")
-		fmt.Println("2.智联")
-		fmt.Println("3.链家租房")
+		logger.Sugar.Info("清除抓取状态（不清除状态的话爬虫会从上次停止位置继续抓取）")
+		logger.Sugar.Info("请选择需要清除哪个爬虫的的状态数据：（输入数字）")
+		logger.Sugar.Info("1.链家二手房")
+		logger.Sugar.Info("2.智联")
+		logger.Sugar.Info("3.链家租房")
 		fmt.Scanln(&choice)
 
 	}
@@ -34,16 +35,16 @@ func Start_clean() {
 	if choice == 1 {
 		db.SetLianjiaStatus(0)
 		clean_visit()
-		fmt.Println("Done!")
+		logger.Sugar.Info("Done!")
 	} else if choice == 2 {
 		db.SetZhilianStatus(0, 0)
-		fmt.Println("Done!")
+		logger.Sugar.Info("Done!")
 	} else if choice == 3 {
 		db.SetLianjiaZuFangStatus(0)
 		clean_visit()
-		fmt.Println("Done!")
+		logger.Sugar.Info("Done!")
 	} else {
-		fmt.Println("选择错误！")
+		logger.Sugar.Info("选择错误！")
 	}
 
 }
@@ -56,7 +57,7 @@ func clean_visit() {
 
 	client, _ := mongo.NewClient(options.Client().ApplyURI(conf["dburl"].(string) + "/colly"))
 	if err := client.Connect(ctx); err != nil {
-		fmt.Println(err)
+		logger.Sugar.Error(err)
 	}
 
 	odb := client.Database("colly")
@@ -65,11 +66,11 @@ func clean_visit() {
 	//清除全部的cookies
 	_, err := cookies.DeleteMany(ctx, bson.M{})
 	if err != nil {
-		fmt.Println(err)
+		logger.Sugar.Error(err)
 	}
 	_, err = visit.DeleteMany(ctx, bson.M{})
 	if err != nil {
-		fmt.Println(err)
+		logger.Sugar.Error(err)
 	}
 
 }

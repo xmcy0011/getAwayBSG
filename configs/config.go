@@ -1,7 +1,7 @@
 package configs
 
 import (
-	"fmt"
+	"github.com/getAwayBSG/logger"
 	"github.com/micro/go-micro/config"
 	"os"
 	"path/filepath"
@@ -23,8 +23,8 @@ func GetInstance() *singleton {
 			if err != nil {
 				err = config.LoadFile("./config.yaml")
 				if err != nil {
-					fmt.Println("加载配置文件错误！！请确认当前目录下包含config.yaml文件或者指定配置文件参数")
-					fmt.Println(err)
+					logger.Sugar.Error("加载配置文件错误！！请确认当前目录下包含config.yaml文件或者指定配置文件参数")
+					logger.Sugar.Fatal(err)
 				}
 			}
 			conf := config.Map()
@@ -33,8 +33,8 @@ func GetInstance() *singleton {
 			instance = new(singleton)
 			err := config.LoadFile(config_path)
 			if err != nil {
-				fmt.Println("加载配置文件错误！！请确认当前目录下包含config.yaml文件或者指定配置文件参数")
-				fmt.Println(err)
+				logger.Sugar.Error("加载配置文件错误！！请确认当前目录下包含config.yaml文件或者指定配置文件参数")
+				logger.Sugar.Fatal(err)
 			}
 			conf := config.Map()
 			instance.configInfo = conf
