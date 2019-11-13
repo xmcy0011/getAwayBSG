@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/entrance"
+	"github.com/getAwayBSG/logger"
 )
 
 // 申明配置变量
@@ -31,6 +32,9 @@ func init() {
 }
 
 func main() {
+	logger.InitLogger("log/log.log", "debug")
+	defer logger.Logger.Sync()
+
 	flag.Parse()
 	//初始化配置信息，同时输出配置信息
 	if config != "" {
