@@ -22,7 +22,38 @@ type Page struct {
 	CurPage   int
 }
 
-func crawlerOneCity(cityUrl string) {
+func getAeraUrl(cityUrl string, areaListChan chan []string) {
+	c := colly.NewCollector()
+	extensions.RandomUserAgent(c)
+	extensions.Referer(c)
+
+	c.OnHTML("body", func(element *colly.HTMLElement) {
+		element.ForEachWithBreak(".position div div", func(i int, element *colly.HTMLElement) bool {
+			u, err := url.Parse(cityUrl)
+			if err != nil {
+				panic(err)
+			}
+			areaArr := make([]string, 0)
+
+			element.ForEach("a", func(i int, element *colly.HTMLElement) {
+				goUrl := element.Attr("href")
+				rootUrl := u.Scheme + "://" + u.Host
+				areaArr = append(areaArr, rootUrl+goUrl)
+			})
+
+			logger.Sugar.Infof("%s,抓取地区共:%d", cityUrl, len(areaArr))
+			areaListChan <- areaArr
+			return false
+		})
+	})
+
+	err := c.Visit(cityUrl)
+	if err != nil {
+		logger.Sugar.Fatalf("%s:%s", err.Error(), cityUrl)
+	}
+}
+
+func crawlerOneCity(cityUrl string, index int, total int) {
 	c := colly.NewCollector()
 	configInfo := configs.Config()
 
@@ -59,95 +90,101 @@ func crawlerOneCity(cityUrl string) {
 	if err := c.SetStorage(storage); err != nil {
 		panic(err)
 	}
-	c.OnRequest(func(r *colly.Request) {
-		logger.Sugar.Info("列表抓取：", r.URL.String())
-	})
 
-	c.OnHTML("title", func(element *colly.HTMLElement) {
-		logger.Sugar.Info(element.Text)
-	})
+	areaListChan := make(chan []string, 1)
+	getAeraUrl(cityUrl, areaListChan)
+	areaArr := <-areaListChan
 
-	c.OnHTML("body", func(element *colly.HTMLElement) {
-		// 获取一页的数据
-		element.ForEach(".LOGCLICKDATA", func(i int, e *colly.HTMLElement) {
-			link := e.ChildAttr("a", "href")
+	var page Page
+	var areaName string
 
-			title := e.ChildText("a:first-child")
-			logger.Sugar.Info(title)
+	arr := strings.Split(cityUrl, ".")
+	cityName := "unknown_city"
+	if len(arr) > 1 {
+		cityName = arr[0][8:]
+	}
 
-			price := e.ChildText(".totalPrice")
-			price = strings.Replace(price, "万", "0000", 1)
-			//fmt.Println("总价：" + price)
-			iPrice, err := strconv.Atoi(price)
-			if err != nil {
-				iPrice = 0
-			}
-
-			unitPrice := e.ChildAttr(".unitPrice", "data-price")
-
-			//fmt.Println("每平米：" + unitPrice)
-			//fmt.Println(e.Text)
-
-			iUnitPrice, err := strconv.Atoi(unitPrice)
-			if err != nil {
-				iUnitPrice = 0
-			}
-			db.Add(bson.M{"zq_detail_status": 0, "Title": title, "TotalePrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "listCrawlTime": time.Now()})
-
-		})
-
-		// 切换地点
-		element.ForEach(".position a", func(i int, element *colly.HTMLElement) {
-			u, err := url.Parse(cityUrl)
-			if err != nil {
-				panic(err)
-			}
-			rootUrl := u.Scheme + "://" + u.Host
-			goUrl := element.Attr("href")
-			u, err = url.Parse(goUrl)
-			if err != nil {
-				logger.Sugar.Info(err)
-			}
-			if u.Scheme == "" {
-				goUrl = rootUrl + u.Path
-			} else {
-				goUrl = u.String()
-			}
-			re, _ := regexp.Compile("pg\\d+/*")
-			goUrl = re.ReplaceAllString(goUrl, "")
-			err = c.Visit(goUrl)
-			logger.Sugar.Info(err)
-		})
-
-		// 下一页
-		element.ForEach(".page-box", func(i int, element *colly.HTMLElement) {
-			var page Page
-			err := json.Unmarshal([]byte(element.ChildAttr(".house-lst-page-box", "page-data")), &page)
-			if err == nil {
-				if page.CurPage < page.TotalPage {
-					var gourl string
-					re, _ := regexp.Compile("pg\\d+/*")
-					gourl = re.ReplaceAllString(element.Request.URL.String(), "")
-					gourl = gourl + "pg" + strconv.Itoa(page.CurPage+1)
-					err = c.Visit(gourl)
-					logger.Sugar.Info(err)
+	// 挨个爬各个地区的房源
+	for i := range areaArr {
+		c.OnHTML("body", func(element *colly.HTMLElement) {
+			// 一个地区的总数
+			element.ForEach(".total", func(i int, element *colly.HTMLElement) {
+				areaName = element.Text
+			})
+			// 获取总页数
+			element.ForEach(".page-box", func(i int, element *colly.HTMLElement) {
+				var tempPage Page
+				err := json.Unmarshal([]byte(element.ChildAttr(".house-lst-page-box", "page-data")), &tempPage)
+				if err == nil {
+					page = tempPage
+					logger.Sugar.Infof("[1/2][%d/%d][%s] totalCount=%s,totalPage=%d,curPage=%d",
+						index+1, total, cityName, areaName, page.TotalPage, page.CurPage)
 				}
-			}
+			})
+
+			// 获取一页的数据
+			curCount := 0
+			element.ForEach(".LOGCLICKDATA", func(i int, e *colly.HTMLElement) {
+				link := e.ChildAttr("a", "href")
+
+				title := e.ChildText("a:first-child")
+				if title == "" {
+					return
+				}
+				curCount++
+
+				price := e.ChildText(".totalPrice")
+				price = strings.Replace(price, "万", "0000", 1)
+				iPrice, err := strconv.Atoi(price)
+				if err != nil {
+					iPrice = 0
+				}
+
+				unitPrice := e.ChildAttr(".unitPrice", "data-price")
+				iUnitPrice, err := strconv.Atoi(unitPrice)
+				if err != nil {
+					iUnitPrice = 0
+				}
+
+				logger.Sugar.Infof("[1/2][%d/%d][%d/%d][%d] %s,%s,%s,总价：%d 万元，每平米：%d", index+1, total,
+					page.CurPage, page.TotalPage, curCount, cityName, areaName, title, iPrice, iUnitPrice)
+
+				db.Add(bson.M{"zq_detail_status": 0, "Title": title, "TotalePrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "listCrawlTime": time.Now()})
+			})
+
+			// 下一页
+			element.ForEach(".page-box", func(i int, element *colly.HTMLElement) {
+				var tempPage Page
+				err := json.Unmarshal([]byte(element.ChildAttr(".house-lst-page-box", "page-data")), &tempPage)
+				if err == nil {
+					if page.CurPage < page.TotalPage {
+						re, _ := regexp.Compile("pg\\d+/*")
+						nextPageUrl := re.ReplaceAllString(element.Request.URL.String(), "")
+						nextPageUrl = nextPageUrl + "pg" + strconv.Itoa(page.CurPage+1)
+						err = c.Visit(nextPageUrl)
+						if err != nil {
+							logger.Sugar.Info(err)
+						}
+					}
+				}
+			})
 		})
 
-	})
-
-	err := c.Visit(cityUrl)
-	logger.Sugar.Error(err)
-
+		err := c.Visit(areaArr[i])
+		if err != nil {
+			logger.Sugar.Debugf("%s:%s", err.Error(), cityUrl)
+		}
+	}
 }
 
 func listCrawler() {
 	confInfo := configs.Config()
 	cityList := confInfo["cityList"].([]interface{})
-	for i := db.GetLianjiaStatus(); i < len(cityList); i++ {
-		crawlerOneCity(cityList[i].(string))
-		db.SetLianjiaStatus(i)
+	count := len(cityList)
+	for i := 0; i < count; i++ {
+		cityName := cityList[i].(string)
+		logger.Sugar.Infof("[1/2][%d/%d] 抓取城市：%s", i+1, count, cityName)
+		crawlerOneCity(cityName, i, count)
 	}
 }
 
@@ -201,9 +238,7 @@ func crawlDetail() (sucnum int) {
 		if err != nil {
 			iArea = 0
 		}
-
 		db.Update(element.Request.URL.String(), bson.M{"area": iArea, "detailCrawlTime": time.Now()})
-
 	})
 
 	c.OnHTML("title", func(element *colly.HTMLElement) {
@@ -223,7 +258,6 @@ func crawlDetail() (sucnum int) {
 
 	c.OnHTML(".transaction li", func(element *colly.HTMLElement) {
 		if element.ChildText("span:first-child") == "挂牌时间" {
-
 			sGTime := element.ChildText("span:last-child")
 			ttime, err := time.Parse("2006-01-02", sGTime)
 
@@ -235,9 +269,9 @@ func crawlDetail() (sucnum int) {
 		}
 	})
 
-	c.OnRequest(func(r *colly.Request) {
-		logger.Sugar.Info("详情抓取：", r.URL.String())
-	})
+	//c.OnRequest(func(r *colly.Request) {
+	//	logger.Sugar.Info("详情抓取：", r.URL.String())
+	//})
 
 	client := db.GetClient()
 	ctx := db.GetCtx()
@@ -263,34 +297,25 @@ func crawlDetail() (sucnum int) {
 
 		}
 	}
-
 	return sucnum
 }
 
-func Start_lianjia_ershou() {
-	listFlag := make(chan int)   //记录列表抓取是否完成
-	detailFlag := make(chan int) //记录详情是否抓取完成
+func StartLianjiaErshou() {
+	listFlag := make(chan int) //记录列表抓取是否完成
 
 	go func() {
 		listCrawler()
 		listFlag <- 1 //列表抓取完成
 	}()
 
-	go func() {
-		zeroNum := 0
-		for i := 0; i < 1; i = 0 {
-			if crawlDetail() == 0 {
-				zeroNum++
-				if zeroNum > 3 { //尝试3次都没有详情需要抓取，结束详情抓取
-					break
-				}
-				time.Sleep(300 * time.Second) //没有详情需要抓取了，等待5分钟再尝试
-			}
-		}
-		detailFlag <- 1 //详情抓取完成
-	}()
-
 	//详情抓取与列表抓取都完成了，结束主线程
 	<-listFlag
-	<-detailFlag
+
+	// 抓详情
+	count := crawlDetail()
+	if count == 0 {
+		logger.Sugar.Error("抓取失败,没有数据")
+	} else {
+		logger.Sugar.Infof("[2/2][%d/%d] 抓取详情完成", count, count)
+	}
 }

@@ -31,6 +31,16 @@ func init() {
 }
 
 func main() {
+	//res, err := http.Get("http://faqrobot.zhaoganguat.com/token/getToken?appId=nyHIZ0a3T2a1OUEARx&secret=IInnYsajr2C5E7140230")
+	//if err != nil {
+	//	return
+	//}
+	//body, err := ioutil.ReadAll(res.Body)
+	//fmt.Println(string(body))
+	//if err == nil {
+	//	return
+	//}
+
 	logger.InitLogger("log/log.log", "debug")
 	defer logger.Logger.Sync()
 	printIcon()
@@ -40,23 +50,28 @@ func main() {
 	if config != "" {
 		configs.SetConfig(config)
 	}
-	logger.Sugar.Info(configs.Config())
+	configMap := configs.Config()
+	logger.Sugar.Infof("dbAddress:%s", configMap["dburl"])
+	logger.Sugar.Infof("dbName:%s", configMap["dbDatabase"])
+	entrance.Start_clean()
 
 	//进入不同入口
 	if lianjiaErshou {
-		entrance.Start_lianjia_ershou()
+		logger.Sugar.Infof("tableName:%s", configMap["dbCollection"])
+		entrance.StartLianjiaErshou()
 	} else if lianjiaZufang {
 		entrance.Start_LianjiaZufang()
 	} else if zhilian {
 		entrance.Start_zhilian()
-	} else if clean {
-		entrance.Start_clean()
-	} else if info {
-		entrance.Start_info(infoSaveTo)
 	} else {
 		fmt.Println("每次抓取都是全量的!")
 		flag.Usage()
 	}
+	//else if clean {
+	//	entrance.Start_clean()
+	//} else if info {
+	//	entrance.Start_info(infoSaveTo)
+	//}
 }
 
 func printIcon() {
