@@ -31,16 +31,6 @@ func init() {
 }
 
 func main() {
-	//res, err := http.Get("http://faqrobot.zhaoganguat.com/token/getToken?appId=nyHIZ0a3T2a1OUEARx&secret=IInnYsajr2C5E7140230")
-	//if err != nil {
-	//	return
-	//}
-	//body, err := ioutil.ReadAll(res.Body)
-	//fmt.Println(string(body))
-	//if err == nil {
-	//	return
-	//}
-
 	logger.InitLogger("log/log.log", "debug")
 	defer logger.Logger.Sync()
 	printIcon()
