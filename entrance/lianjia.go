@@ -2,6 +2,7 @@ package entrance
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/db"
 	"github.com/getAwayBSG/logger"
@@ -53,16 +54,27 @@ func getAeraUrl(cityUrl string, areaListChan chan []string) {
 	}
 }
 
-func crawlerOneCity(cityUrl string, index int, total int) {
+func getListProgress(cityIndex int, cityCount int, areaIndex int, areaCount int, pageNum int, pageCount int) string {
+	// [1/2]
+	// [%d/%d]：城市
+	// [%d/%d]：地区
+	// [%d/%d]：分页
+	return fmt.Sprintf("[1/2][%d/%d][%d/%d][%d/%d]",
+		cityIndex+1, cityCount, areaIndex+1, areaCount, pageNum, pageCount)
+}
+
+func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 	c := colly.NewCollector()
 	configInfo := configs.Config()
 
 	if configInfo["crawlDelay"] != nil {
 		delay, _ := configInfo["crawlDelay"].(json.Number).Int64()
 		if delay > 0 {
+			// randomDelay:200-delay
 			c.Limit(&colly.LimitRule{
-				DomainGlob: "*",
-				Delay:      time.Duration(delay) * time.Second,
+				DomainGlob:  "*",
+				Delay:       time.Millisecond * 200,
+				RandomDelay: time.Duration(delay-200) * time.Millisecond,
 			})
 		}
 	}
@@ -97,6 +109,7 @@ func crawlerOneCity(cityUrl string, index int, total int) {
 
 	var page Page
 	var areaName string
+	var areaCount = len(areaArr)
 
 	arr := strings.Split(cityUrl, ".")
 	cityName := "unknown_city"
@@ -105,7 +118,7 @@ func crawlerOneCity(cityUrl string, index int, total int) {
 	}
 
 	// 挨个爬各个地区的房源
-	for i := range areaArr {
+	for areaIndex := range areaArr {
 		c.OnHTML("body", func(element *colly.HTMLElement) {
 			// 一个地区的总数
 			element.ForEach(".total", func(i int, element *colly.HTMLElement) {
@@ -117,8 +130,10 @@ func crawlerOneCity(cityUrl string, index int, total int) {
 				err := json.Unmarshal([]byte(element.ChildAttr(".house-lst-page-box", "page-data")), &tempPage)
 				if err == nil {
 					page = tempPage
-					logger.Sugar.Infof("[1/2][%d/%d][%s] totalCount=%s,totalPage=%d,curPage=%d",
-						index+1, total, cityName, areaName, page.TotalPage, page.CurPage)
+
+					progressInfo := getListProgress(cityIndex, cityCount, areaIndex, areaCount, page.CurPage, page.TotalPage)
+					logger.Sugar.Infof("%s[%s] totalCount=%s,totalPage=%d,curPage=%d",
+						progressInfo, cityName, areaName, page.TotalPage, page.CurPage)
 				}
 			})
 
@@ -146,8 +161,9 @@ func crawlerOneCity(cityUrl string, index int, total int) {
 					iUnitPrice = 0
 				}
 
-				logger.Sugar.Infof("[1/2][%d/%d][%d/%d][%d] %s,%s,%s,总价：%d 万元，每平米：%d", index+1, total,
-					page.CurPage, page.TotalPage, curCount, cityName, areaName, title, iPrice, iUnitPrice)
+				progressInfo := getListProgress(cityIndex, cityCount, areaIndex, areaCount, page.CurPage, page.TotalPage)
+				logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
+					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
 
 				db.Add(bson.M{"zq_detail_status": 0, "Title": title, "TotalePrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "listCrawlTime": time.Now()})
 			})
@@ -170,7 +186,7 @@ func crawlerOneCity(cityUrl string, index int, total int) {
 			})
 		})
 
-		err := c.Visit(areaArr[i])
+		err := c.Visit(areaArr[areaIndex])
 		if err != nil {
 			logger.Sugar.Debugf("%s:%s", err.Error(), cityUrl)
 		}
