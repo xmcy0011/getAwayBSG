@@ -41,14 +41,13 @@ func main() {
 		configs.SetConfig(config)
 	}
 	configMap := configs.Config()
-	logger.Sugar.Infof("dbAddress:%s", configMap["dburl"])
-	logger.Sugar.Infof("dbName:%s", configMap["dbDatabase"])
+	logger.Sugar.Infof("dbAddress=%s,dbName=%s", configMap["dburl"], configMap["dbDatabase"])
 	entrance.Start_clean()
 
 	//进入不同入口
 	if lianjiaErshou {
-		logger.Sugar.Infof("tableName:%s", configMap["dbCollection"])
-		entrance.StartLianjiaErshou()
+		logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configMap["dbCollection"])
+		entrance.StartLJSecondHandHouse()
 	} else if lianjiaZufang {
 		entrance.Start_LianjiaZufang()
 	} else if zhilian {

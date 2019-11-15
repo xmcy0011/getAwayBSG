@@ -39,32 +39,6 @@ func GetInstance() *singleton {
 	return instance
 }
 
-func GetLianjiaStatus() int {
-	client := GetInstance().client
-	ctx := GetInstance().ctx
-	configInfo := configs.Config()
-	db := client.Database(configInfo["dbDatabase"].(string))
-	lianjia_status := db.Collection("lianjia_status")
-	var res bson.M
-	err := lianjia_status.FindOne(ctx, bson.M{}).Decode(&res)
-	if err != nil {
-		return 0
-	}
-
-	index := res["index"].(int32)
-	return int(index)
-}
-
-func SetLianjiaStatus(i int) {
-	client := GetInstance().client
-	ctx := GetInstance().ctx
-	configInfo := configs.Config()
-	db := client.Database(configInfo["dbDatabase"].(string))
-	lianjia_status := db.Collection("lianjia_status")
-	lianjia_status.DeleteMany(ctx, bson.M{})
-	lianjia_status.InsertOne(ctx, bson.M{"index": i})
-}
-
 func GetZhilianStatus() (int, int) {
 	client := GetInstance().client
 	ctx := GetInstance().ctx

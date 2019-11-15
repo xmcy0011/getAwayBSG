@@ -15,12 +15,20 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type Page struct {
 	TotalPage int
 	CurPage   int
+}
+
+type HouseInfo struct {
+	Title      string `json:"title"`
+	Link       string `json:"link"`
+	TotalPrice int32  `json:"total_price"`
 }
 
 func getAeraUrl(cityUrl string, areaListChan chan []string) {
@@ -61,6 +69,15 @@ func getListProgress(cityIndex int, cityCount int, areaIndex int, areaCount int,
 	// [%d/%d]：分页
 	return fmt.Sprintf("[1/2][%d/%d][%d/%d][%d/%d]",
 		cityIndex+1, cityCount, areaIndex+1, areaCount, pageNum, pageCount)
+}
+
+func getDetailProgress(curCount int, totalCount int) string {
+	return fmt.Sprintf("[2/2][%d/%d]", curCount, totalCount)
+}
+
+func decimal(value float64) float64 {
+	value, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", value), 64)
+	return value
 }
 
 func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
@@ -165,7 +182,7 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 				logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
 					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
 
-				db.Add(bson.M{"zq_detail_status": 0, "Title": title, "TotalePrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "listCrawlTime": time.Now()})
+				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "ListCrawlTime": time.Now()})
 			})
 
 			// 下一页
@@ -204,8 +221,8 @@ func listCrawler() {
 	}
 }
 
-func crawlDetail() (sucnum int) {
-	sucnum = 0
+func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, total int) (successCount int32) {
+	successCount = 0
 	c := colly.NewCollector()
 	configInfo := configs.Config()
 
@@ -214,8 +231,9 @@ func crawlDetail() (sucnum int) {
 		delay, _ := configInfo["crawlDelay"].(json.Number).Int64()
 		if delay > 0 {
 			c.Limit(&colly.LimitRule{
-				DomainGlob: "*",
-				Delay:      time.Duration(delay) * time.Second,
+				DomainGlob:  "*",
+				Delay:       200 * time.Millisecond,
+				RandomDelay: time.Millisecond * time.Duration(delay-200),
 			})
 		}
 	}
@@ -248,90 +266,235 @@ func crawlDetail() (sucnum int) {
 	if err := c.SetStorage(storage); err != nil {
 		panic(err)
 	}
-	c.OnHTML(".area .mainInfo", func(element *colly.HTMLElement) {
-		area := strings.Replace(element.Text, "平米", "", 1)
-		iArea, err := strconv.Atoi(area)
-		if err != nil {
-			iArea = 0
-		}
-		db.Update(element.Request.URL.String(), bson.M{"area": iArea, "detailCrawlTime": time.Now()})
+
+	var roomInfo string  // 户型,3室1厅
+	var floorInfo string // 楼层,低楼层/共17层
+
+	var directionInfo string // 朝向,南北
+	var decorateInfo string  // 装修,平层/精装
+
+	var size float64         // 大小,平米
+	var completedInfo string // 竣工时间,2007年建/板楼
+
+	var villageName string   // 小区名称
+	var areaName []string    // 所在区域
+	var houseRecordLJ string // 链家房源编号
+
+	var title string // 标题
+
+	var baseAttr string        // 基本属性
+	var transactionAttr string // 交易属性
+
+	var beOnlineTime time.Time // 挂牌时间
+
+	// 户型+楼层
+	c.OnHTML(".houseInfo", func(element *colly.HTMLElement) {
+		element.ForEach(".mainInfo", func(i int, element *colly.HTMLElement) {
+			roomInfo = element.Text
+		})
+		element.ForEach(".subInfo", func(i int, element *colly.HTMLElement) {
+			floorInfo = element.Text
+		})
 	})
 
-	c.OnHTML("title", func(element *colly.HTMLElement) {
-		logger.Sugar.Info(element.Text)
+	// 朝向+装修
+	c.OnHTML(".type", func(element *colly.HTMLElement) {
+		element.ForEach(".mainInfo", func(i int, element *colly.HTMLElement) {
+			directionInfo = element.Text
+		})
+		element.ForEach(".subInfo", func(i int, element *colly.HTMLElement) {
+			decorateInfo = element.Text
+		})
 	})
 
+	// 大小+竣工时间
+	c.OnHTML(".area", func(element *colly.HTMLElement) {
+		element.ForEach(".mainInfo", func(i int, element *colly.HTMLElement) {
+			area := strings.Replace(element.Text, "平米", "", 1)
+			value, err := strconv.ParseFloat(area, 32)
+			if err != nil {
+				value = 0
+			}
+			size = decimal(value) // 保留2位小数
+		})
+		element.ForEach(".subInfo", func(i int, element *colly.HTMLElement) {
+			completedInfo = element.Text
+		})
+	})
+
+	// 小区名称
 	c.OnHTML(".aroundInfo .communityName .info", func(element *colly.HTMLElement) {
-		db.Update(element.Request.URL.String(), bson.M{"xiaoqu": element.Text, "detailCrawlTime": time.Now()})
+		villageName = element.Text
 	})
 
+	// 所在区域
 	c.OnHTML(".l-txt", func(element *colly.HTMLElement) {
 		res := strings.Replace(element.Text, "二手房", "", 99)
 		res = strings.Replace(res, " ", "", 99)
-		address := strings.Split(res, ">")
-		db.Update(element.Request.URL.String(), bson.M{"address": address[1 : len(address)-1], "detailCrawlTime": time.Now()})
+		areaName = strings.Split(res, ">")
 	})
 
-	c.OnHTML(".transaction li", func(element *colly.HTMLElement) {
-		if element.ChildText("span:first-child") == "挂牌时间" {
-			sGTime := element.ChildText("span:last-child")
-			ttime, err := time.Parse("2006-01-02", sGTime)
+	// 房源编号
+	c.OnHTML(".houseRecord .info", func(element *colly.HTMLElement) {
+		arr := strings.Split(element.Text, "举")
+		houseRecordLJ = arr[0]
+	})
 
-			if err != nil {
-				ttime = time.Now()
+	// 基本属性
+	c.OnHTML(".base .content", func(element *colly.HTMLElement) {
+		element.ForEach("li", func(i int, element *colly.HTMLElement) {
+			var label = ""
+			element.ForEach("span", func(i int, element *colly.HTMLElement) {
+				label = element.Text
+			})
+			index := strings.Index(element.Text, label)
+			baseAttr += label + ":" + element.Text[(index+len(label)):] + "|"
+		})
+	})
+
+	// 交易属性
+	c.OnHTML(".transaction .content", func(element *colly.HTMLElement) {
+		element.ForEach("li", func(i int, element *colly.HTMLElement) {
+			// 挂牌时间
+			if element.ChildText("span:first-child") == "挂牌时间" {
+				sGTime := element.ChildText("span:last-child")
+				parsedTime, err := time.Parse("2006-01-02", sGTime)
+				if err != nil {
+					parsedTime = time.Now()
+				}
+				beOnlineTime = parsedTime
+			} else {
+				var liText = ""
+				element.ForEach("span", func(i int, element *colly.HTMLElement) {
+					if i == 0 {
+						liText = element.Text + ":"
+					} else {
+						liText += element.Text
+					}
+				})
+				transactionAttr += liText + "|"
 			}
-
-			db.Update(element.Request.URL.String(), bson.M{"zq_detail_status": 1, "guapaitime": ttime, "detailCrawlTime": time.Now()})
-		}
+		})
 	})
 
-	//c.OnRequest(func(r *colly.Request) {
-	//	logger.Sugar.Info("详情抓取：", r.URL.String())
-	//})
+	// 标题
+	c.OnHTML("title", func(element *colly.HTMLElement) {
+		title = element.Text
+	})
+
+	for i := range houseArr {
+		url := houseArr[i].Link
+		err := c.Visit(url)
+		if err != nil {
+			logger.Sugar.Errorf("%s[协程%d],抓取失败:%s,url=%s", getDetailProgress(startNum+1, total),
+				routineIndex, err.Error(), url)
+			db.Update(url, bson.M{"DetailStatus": 1})
+		} else {
+			logger.Sugar.Infof("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
+				routineIndex, title, houseArr[i].TotalPrice, houseRecordLJ, directionInfo, decorateInfo)
+
+			db.Update(url, bson.M{
+				"DetailStatus":    1,
+				"RoomInfo":        roomInfo,
+				"FloorInfo":       floorInfo,
+				"DirectionInfo":   directionInfo,
+				"DecorateInfo":    decorateInfo,
+				"Size":            size,
+				"CompletedInfo":   completedInfo,
+				"VillageName":     villageName,
+				"AreaName":        areaName,
+				"HouseRecordLJ":   houseRecordLJ,
+				"BaseAttr":        baseAttr,
+				"TransactionAttr": transactionAttr,
+				"BeOnlineTime":    beOnlineTime,
+				"DetailCrawlTime": time.Now()})
+			successCount++
+		}
+		startNum++
+	}
+	return successCount
+}
+
+func crawlerDetail() (successCount int32, total int) {
+	var routineCount int64 = 0
+
+	total = 0
+	successCount = 0
+	configInfo := configs.Config()
 
 	client := db.GetClient()
 	ctx := db.GetCtx()
 
 	odb := client.Database(configInfo["dbDatabase"].(string))
-	lianjia := odb.Collection(configInfo["dbCollection"].(string))
+	dbCollection := odb.Collection(configInfo["dbCollection"].(string))
 
 	//读取出全部需要抓取详情的数据
-	cur, err := lianjia.Find(ctx, bson.M{"zq_detail_status": 0})
-
+	cur, err := dbCollection.Find(ctx, bson.M{"DetailStatus": 0})
 	if err != nil {
-		logger.Sugar.Error(err)
-	} else {
-		defer cur.Close(ctx)
-		for cur.Next(ctx) {
-			var item bson.M
-			if err := cur.Decode(&item); err != nil {
-				logger.Sugar.Errorf("数据库读取失败:%s", err.Error())
-			} else {
-				sucnum++
-				c.Visit(item["Link"].(string))
-			}
-
-		}
+		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
+		return
 	}
-	return sucnum
+	var houseArr = make([]HouseInfo, 0)
+	err = cur.All(ctx, &houseArr)
+	if err != nil {
+		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
+		return
+	}
+	total = len(houseArr)
+	defer cur.Close(ctx)
+
+	if configInfo["crawlDetailRoutineNum"] != nil {
+		routineCount, _ = configInfo["crawlDetailRoutineNum"].(json.Number).Int64()
+	}
+	logger.Sugar.Infof("[2/2] 开始抓取二手房详情,总数=%d,并行抓取协程数=%d", total, routineCount)
+
+	var wg sync.WaitGroup
+	for j := 0; j < int(routineCount); j++ {
+		perCount := total / int(routineCount)
+		var tempHouseArr []HouseInfo
+		var startCount = j * perCount
+		var endCount int
+		if (j + 1) == int(routineCount) {
+			endCount = total
+			tempHouseArr = houseArr[startCount:total] // 除不尽的，全部交给最后一个协程
+		} else {
+			endCount = (j + 1) * perCount
+			tempHouseArr = houseArr[startCount:endCount]
+		}
+
+		wg.Add(1)
+		go func(startNum int, routineIndex int, houseArr []HouseInfo) {
+			defer wg.Add(-1)
+			// 1协程抓取一组数据
+			count := crawlerOneDetail(startNum, routineIndex, tempHouseArr, total)
+			// 原子操作，多线程安全
+			atomic.AddInt32(&successCount, count)
+		}(j*perCount, j, tempHouseArr)
+		logger.Sugar.Infof("[2/2] 第 %d 组协程抓取 [%d-%d] 的房屋详情", j+1, startCount, endCount)
+	}
+
+	wg.Wait() // 等待所有协程完成
+	return successCount, total
 }
 
-func StartLianjiaErshou() {
-	listFlag := make(chan int) //记录列表抓取是否完成
-
+func StartLJSecondHandHouse() {
+	listFlag := make(chan int)
 	go func() {
+		logger.Sugar.Info("[1/2] 开始抓取城市二手房概要信息")
 		listCrawler()
 		listFlag <- 1 //列表抓取完成
 	}()
 
-	//详情抓取与列表抓取都完成了，结束主线程
+	//阻塞主线程，等待列表抓取
 	<-listFlag
 
 	// 抓详情
-	count := crawlDetail()
-	if count == 0 {
-		logger.Sugar.Error("抓取失败,没有数据")
+	logger.Sugar.Info("[2/2] 开始抓取城市二手房详细信息")
+	time.Sleep(time.Second * 3)
+	successCount, total := crawlerDetail()
+	if successCount == 0 {
+		logger.Sugar.Error("[2/2] 抓取详情失败,没有数据，结束二手房抓取!")
 	} else {
-		logger.Sugar.Infof("[2/2][%d/%d] 抓取详情完成", count, count)
+		logger.Sugar.Infof("[2/2] 抓取详情完成，成功数=%d,总数=%d，结束二手房抓取!", successCount, total)
 	}
 }

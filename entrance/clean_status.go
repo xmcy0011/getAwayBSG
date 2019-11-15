@@ -33,9 +33,8 @@ func Start_clean() {
 	}
 
 	if choice == 1 {
-		db.SetLianjiaStatus(0)
 		clean_visit()
-		logger.Sugar.Info("Done!")
+		logger.Sugar.Info("Clear colly cookie done!")
 	} else if choice == 2 {
 		db.SetZhilianStatus(0, 0)
 		logger.Sugar.Info("Done!")
