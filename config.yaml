@@ -1,5 +1,5 @@
 #MongoDB 连接URL
-dburl: mongodb://10.0.59.117:27017
+dbUrl: mongodb://106.14.172.35:27017
 
 # MongoDB 数据库名
 dbDatabase: crawler
@@ -8,7 +8,7 @@ dbDatabase: crawler
 collyDatabase: colly
 
 # 租房存储数据集合
-zufangCollection: lianjia_zufang
+rentCollection: lianjia_zufang
 
 # 抓取间隔时间上限 单位毫秒(随机)
 crawlDelay: 1000
@@ -19,7 +19,7 @@ crawlDetailRoutineNum: 2
 # MongoDB 集合名
 # 存链家的数据
 # 自己添加Link 字段的唯一键，不然有重复
-dbCollection: lianjia
+twoHandHouseCollection: lianjia
 
 # 存智联的数据
 # 自己添加positionURL 字段的唯一键，不然有重复
@@ -181,7 +181,7 @@ cityList:
 
 
 # 需要抓取租房数据的城市
-zufangCityList:
+rentCityList:
   - link: https://cd.lianjia.com/zufang/
     name: 成都
   - link: https://bj.lianjia.com/zufang/

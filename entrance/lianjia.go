@@ -82,39 +82,33 @@ func decimal(value float64) float64 {
 
 func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 	c := colly.NewCollector()
-	configInfo := configs.Config()
 
-	if configInfo["crawlDelay"] != nil {
-		delay, _ := configInfo["crawlDelay"].(json.Number).Int64()
-		if delay > 0 {
-			// randomDelay:200-delay
-			c.Limit(&colly.LimitRule{
-				DomainGlob:  "*",
-				Delay:       time.Millisecond * 200,
-				RandomDelay: time.Duration(delay-200) * time.Millisecond,
-			})
+	if configs.ConfigInfo.CrawlDelay > 0 {
+		// randomDelay:200-delay
+		err := c.Limit(&colly.LimitRule{
+			DomainGlob:  "*",
+			Delay:       time.Millisecond * 200,
+			RandomDelay: time.Duration(configs.ConfigInfo.CrawlDelay-200) * time.Millisecond,
+		})
+		if err != nil {
+			logger.Sugar.Error(err)
 		}
 	}
 
-	if configInfo["proxyList"] != nil && len(configInfo["proxyList"].([]interface{})) > 0 {
-		var proxyList []string
-		for _, v := range configInfo["proxyList"].([]interface{}) {
-			proxyList = append(proxyList, v.(string))
+	// 代理
+	if configs.ConfigInfo.ProxyList != nil {
+		rp, err := proxy.RoundRobinProxySwitcher(configs.ConfigInfo.ProxyList...)
+		if err != nil {
+			logger.Sugar.Error(err)
 		}
-
-		if configInfo["proxyList"] != nil {
-			rp, err := proxy.RoundRobinProxySwitcher(proxyList...)
-			if err != nil {
-				logger.Sugar.Error(err)
-			}
-			c.SetProxyFunc(rp)
-		}
+		c.SetProxyFunc(rp)
 	}
+
 	extensions.RandomUserAgent(c)
 	extensions.Referer(c)
 	storage := &cachemongo.Storage{
 		Database: "colly",
-		URI:      configInfo["dburl"].(string) + "/colly",
+		URI:      configs.ConfigInfo.DbRrl + "/colly",
 	}
 	if err := c.SetStorage(storage); err != nil {
 		panic(err)
@@ -211,11 +205,9 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 }
 
 func listCrawler() {
-	confInfo := configs.Config()
-	cityList := confInfo["cityList"].([]interface{})
-	count := len(cityList)
+	count := len(configs.ConfigInfo.CityList)
 	for i := 0; i < count; i++ {
-		cityName := cityList[i].(string)
+		cityName := configs.ConfigInfo.CityList[i]
 		logger.Sugar.Infof("[1/2][%d/%d] 抓取城市：%s", i+1, count, cityName)
 		crawlerOneCity(cityName, i, count)
 	}
@@ -224,34 +216,26 @@ func listCrawler() {
 func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, total int) (successCount int32) {
 	successCount = 0
 	c := colly.NewCollector()
-	configInfo := configs.Config()
 
 	//设置延时
-	if configInfo["crawlDelay"] != nil {
-		delay, _ := configInfo["crawlDelay"].(json.Number).Int64()
-		if delay > 0 {
-			c.Limit(&colly.LimitRule{
-				DomainGlob:  "*",
-				Delay:       200 * time.Millisecond,
-				RandomDelay: time.Millisecond * time.Duration(delay-200),
-			})
+	if configs.ConfigInfo.CrawlDelay > 0 {
+		err := c.Limit(&colly.LimitRule{
+			DomainGlob:  "*",
+			Delay:       200 * time.Millisecond,
+			RandomDelay: time.Millisecond * time.Duration(configs.ConfigInfo.CrawlDelay-200),
+		})
+		if err != nil {
+			logger.Sugar.Error(err)
 		}
 	}
 
 	//设置代理
-	if configInfo["proxyList"] != nil && len(configInfo["proxyList"].([]interface{})) > 0 {
-		var proxyList []string
-		for _, v := range configInfo["proxyList"].([]interface{}) {
-			proxyList = append(proxyList, v.(string))
+	if configs.ConfigInfo.ProxyList != nil {
+		rp, err := proxy.RoundRobinProxySwitcher(configs.ConfigInfo.ProxyList...)
+		if err != nil {
+			logger.Sugar.Error(err)
 		}
-
-		if configInfo["proxyList"] != nil {
-			rp, err := proxy.RoundRobinProxySwitcher(proxyList...)
-			if err != nil {
-				logger.Sugar.Error(err)
-			}
-			c.SetProxyFunc(rp)
-		}
+		c.SetProxyFunc(rp)
 	}
 
 	//随机UA
@@ -261,7 +245,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	//设置MongoDB存储状态信息
 	storage := &cachemongo.Storage{
 		Database: "colly",
-		URI:      configInfo["dburl"].(string) + "/colly",
+		URI:      configs.ConfigInfo.DbRrl + "/colly",
 	}
 	if err := c.SetStorage(storage); err != nil {
 		panic(err)
@@ -416,17 +400,16 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 }
 
 func crawlerDetail() (successCount int32, total int) {
-	var routineCount int64 = 0
+	var routineCount int = 0
 
 	total = 0
 	successCount = 0
-	configInfo := configs.Config()
 
 	client := db.GetClient()
 	ctx := db.GetCtx()
 
-	odb := client.Database(configInfo["dbDatabase"].(string))
-	dbCollection := odb.Collection(configInfo["dbCollection"].(string))
+	odb := client.Database(configs.ConfigInfo.DbDatabase)
+	dbCollection := odb.Collection(configs.ConfigInfo.DbDatabase)
 
 	//读取出全部需要抓取详情的数据
 	cur, err := dbCollection.Find(ctx, bson.M{"DetailStatus": 0})
@@ -443,9 +426,7 @@ func crawlerDetail() (successCount int32, total int) {
 	total = len(houseArr)
 	defer cur.Close(ctx)
 
-	if configInfo["crawlDetailRoutineNum"] != nil {
-		routineCount, _ = configInfo["crawlDetailRoutineNum"].(json.Number).Int64()
-	}
+	routineCount = configs.ConfigInfo.CrawlDetailRoutineNum
 	logger.Sugar.Infof("[2/2] 开始抓取二手房详情,总数=%d,并行抓取协程数=%d", total, routineCount)
 
 	var wg sync.WaitGroup

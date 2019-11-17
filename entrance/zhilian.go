@@ -15,9 +15,8 @@ import (
 )
 
 func Start_zhilian() {
-	configInfo := configs.Config()
-	keys := configInfo["zlKeyWords"].([]interface{})
-	cityList := configInfo["zlCityList"].([]interface{})
+	keys := configs.ConfigInfo.ZlKeyWords
+	cityList := configs.ConfigInfo.ZlCityList
 
 	cityIndex, kwIndex := db.GetZhilianStatus()
 
@@ -25,23 +24,19 @@ func Start_zhilian() {
 		for j := cityIndex; j < len(cityList); j++ {
 			var total int = 1000
 			for start := 0; start < total; start += 50 {
-				cityid := cityList[j].(map[string]interface{})["code"]
-				if cityid == nil {
-					logger.Sugar.Info(cityList[j])
-				}
-				icityid, err := cityid.(json.Number).Int64()
-				if err != nil {
-					icityid = 530
-				}
+				// icityid = 530
+				cityId := cityList[j].Code
+				logger.Sugar.Info(cityList[j])
+
 				length := 50
-				keyword := keys[i].(string)
+				keyword := keys[i]
 				keyword = url.QueryEscape(keyword)
 				////apiUrl:= "https://fe-api.zhaopin.com/c/i/sou?start=" + strconv.Itoa(start) + "pageSize=" + strconv.Itoa(length) + "&cityId=" + strconv.Itoa(cityid) + "&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&sortType=publish&kw=" + keys[i].(string) + "&kt=3&_v=0.17996222&x-zp-page-request-id=e8d2c03d3c4347a9b5edffa03367d90d-1547646999572-254944"
-				apiUrl := "https://fe-api.zhaopin.com/c/i/sou?start=" + strconv.Itoa(start) + "&pageSize=" + strconv.Itoa(length) + "&cityId=" + strconv.Itoa(int(icityid)) + "&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&sortType=publish&kw=" + keyword + "&kt=3&_v=0.96788938&x-zp-page-request-id=adce992a71af4857ad9dd407cae222ff-1562161856663-558612&x-zp-client-id=f0fe8f7b-8a03-4076-9894-4389e9959954"
+				apiUrl := "https://fe-api.zhaopin.com/c/i/sou?start=" + strconv.Itoa(start) + "&pageSize=" + strconv.Itoa(length) + "&cityId=" + strconv.Itoa(cityId) + "&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&sortType=publish&kw=" + keyword + "&kt=3&_v=0.96788938&x-zp-page-request-id=adce992a71af4857ad9dd407cae222ff-1562161856663-558612&x-zp-client-id=f0fe8f7b-8a03-4076-9894-4389e9959954"
 				logger.Sugar.Info(apiUrl)
 				res := get(apiUrl)
 				var mapResult map[string]interface{}
-				err = json.Unmarshal([]byte(res), &mapResult)
+				err := json.Unmarshal([]byte(res), &mapResult)
 
 				if err != nil {
 					logger.Sugar.Errorf("JsonToMapDemo err: ", err)
@@ -75,23 +70,15 @@ func get(link string) (bodystr string) {
 
 	bodystr = ""
 	var client *http.Client
-	configInfo := configs.Config()
 
-	if configInfo["crawlDelay"] != nil {
-		delay, _ := configInfo["crawlDelay"].(json.Number).Int64()
-		if delay > 0 {
-			time.Sleep(time.Duration(delay) * time.Second)
-		}
+	if configs.ConfigInfo.CrawlDelay > 0 {
+		time.Sleep(time.Duration(configs.ConfigInfo.CrawlDelay) * time.Second)
 	}
 
-	if configInfo["proxyList"] != nil {
-		var proxyList []string
-		for _, v := range configInfo["proxyList"].([]interface{}) {
-			proxyList = append(proxyList, v.(string))
-		}
+	if configs.ConfigInfo.ProxyList != nil {
 		rand.Seed(time.Now().Unix())
 
-		proxy, _ := url.Parse(proxyList[rand.Intn(len(proxyList))])
+		proxy, _ := url.Parse(configs.ConfigInfo.ProxyList[rand.Intn(len(configs.ConfigInfo.ProxyList))])
 		tr := &http.Transport{
 			Proxy:           http.ProxyURL(proxy),
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},

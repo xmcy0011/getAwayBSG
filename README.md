@@ -91,7 +91,7 @@ getAwayBSG -help
 分析用的MongoDB语句在[Query.js](./Query.js)文件中，使用MongoDB执行即可
 
 ## 编译
-1.use dep  
+1.use dep(mac osx)
 ```shell script
 env http_proxy=http://127.0.0.1:60339 https_proxy=http://127.0.0.1:60339 dep ensure -v
 # 如果是执行dep init -v，编译时出差：

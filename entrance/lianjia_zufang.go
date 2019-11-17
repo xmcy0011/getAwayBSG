@@ -1,7 +1,6 @@
 package entrance
 
 import (
-	"encoding/json"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/db"
 	"github.com/getAwayBSG/logger"
@@ -19,37 +18,26 @@ import (
 
 func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 	c := colly.NewCollector()
-	configInfo := configs.Config()
 
-	if configInfo["crawlDelay"] != nil {
-		delay, _ := configInfo["crawlDelay"].(json.Number).Int64()
-		if delay > 0 {
-			c.Limit(&colly.LimitRule{
-				DomainGlob: "*",
-				Delay:      time.Duration(delay) * time.Second,
-			})
-		}
+	if configs.ConfigInfo.CrawlDelay > 0 {
+		_ = c.Limit(&colly.LimitRule{
+			DomainGlob: "*",
+			Delay:      time.Duration(configs.ConfigInfo.CrawlDelay) * time.Second,
+		})
 	}
 
-	if configInfo["proxyList"] != nil && len(configInfo["proxyList"].([]interface{})) > 0 {
-		var proxyList []string
-		for _, v := range configInfo["proxyList"].([]interface{}) {
-			proxyList = append(proxyList, v.(string))
+	if configs.ConfigInfo.ProxyList != nil {
+		rp, err := proxy.RoundRobinProxySwitcher(configs.ConfigInfo.ProxyList...)
+		if err != nil {
+			logger.Sugar.Error(err)
 		}
-
-		if configInfo["proxyList"] != nil {
-			rp, err := proxy.RoundRobinProxySwitcher(proxyList...)
-			if err != nil {
-				logger.Sugar.Error(err)
-			}
-			c.SetProxyFunc(rp)
-		}
+		c.SetProxyFunc(rp)
 	}
 	extensions.RandomUserAgent(c)
 	extensions.Referer(c)
 	storage := &cachemongo.Storage{
 		Database: "colly",
-		URI:      configInfo["dburl"].(string) + "/colly",
+		URI:      configs.ConfigInfo.DbRrl + "/colly",
 	}
 	if err := c.SetStorage(storage); err != nil {
 		panic(err)
@@ -118,8 +106,8 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 		client := db.GetClient()
 		ctx := db.GetCtx()
 
-		db := client.Database(configInfo["dbDatabase"].(string))
-		lianjia := db.Collection(configInfo["zufangCollection"].(string))
+		db := client.Database(configs.ConfigInfo.DbDatabase)
+		lianjia := db.Collection(configs.ConfigInfo.RentCollection)
 		_, err = lianjia.InsertOne(ctx, bson.M{
 			"Link":       link,
 			"title":      title,
@@ -199,12 +187,10 @@ func TcrawlerOneCityZuFang(cityUrl string, cityname string) {
 }
 
 func Start_LianjiaZufang() {
-	configinfo := configs.Config()
-
-	cityList := configinfo["zufangCityList"].([]interface{})
+	cityList := configs.ConfigInfo.RentCityList
 
 	for i := db.GetLianjiaZuFangStatus(); i < len(cityList); i++ {
-		TcrawlerOneCityZuFang(cityList[i].(map[string]interface{})["link"].(string), cityList[i].(map[string]interface{})["name"].(string))
+		TcrawlerOneCityZuFang(cityList[i].Link, cityList[i].Name)
 		db.SetLianjiaZuFangStatus(i)
 	}
 }

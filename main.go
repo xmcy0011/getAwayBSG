@@ -38,15 +38,16 @@ func main() {
 	flag.Parse()
 	//初始化配置信息，同时输出配置信息
 	if config != "" {
-		configs.SetConfig(config)
+		configs.LoadConfig(config)
+	} else {
+		configs.LoadConfig("config.yaml")
 	}
-	configMap := configs.Config()
-	logger.Sugar.Infof("dbAddress=%s,dbName=%s", configMap["dburl"], configMap["dbDatabase"])
+	logger.Sugar.Infof("dbAddress=%s,dbName=%s", configs.ConfigInfo.DbRrl, configs.ConfigInfo.DbDatabase)
 	entrance.Start_clean()
 
 	//进入不同入口
 	if lianjiaErshou {
-		logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configMap["dbCollection"])
+		logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
 		entrance.StartLJSecondHandHouse()
 	} else if lianjiaZufang {
 		entrance.Start_LianjiaZufang()

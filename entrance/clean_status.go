@@ -29,7 +29,6 @@ func Start_clean() {
 		logger.Sugar.Info("2.智联")
 		logger.Sugar.Info("3.链家租房")
 		fmt.Scanln(&choice)
-
 	}
 
 	if choice == 1 {
@@ -49,12 +48,10 @@ func Start_clean() {
 }
 
 func clean_visit() {
-	conf := configs.Config()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, _ := mongo.NewClient(options.Client().ApplyURI(conf["dburl"].(string) + "/colly"))
+	client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/colly"))
 	if err := client.Connect(ctx); err != nil {
 		logger.Sugar.Error(err)
 	}

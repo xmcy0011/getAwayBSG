@@ -20,8 +20,7 @@ var instance *singleton
 func GetInstance() *singleton {
 	if instance == nil {
 		instance = new(singleton)
-		configInfo := configs.Config()
-		client, _ := mongo.NewClient(options.Client().ApplyURI(configInfo["dburl"].(string) + "/" + configInfo["dbDatabase"].(string)))
+		client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/" + configs.ConfigInfo.DbDatabase))
 		ctx := context.Background()
 		instance.client = client
 		instance.ctx = ctx
@@ -42,8 +41,7 @@ func GetInstance() *singleton {
 func GetZhilianStatus() (int, int) {
 	client := GetInstance().client
 	ctx := GetInstance().ctx
-	configInfo := configs.Config()
-	db := client.Database(configInfo["dbDatabase"].(string))
+	db := client.Database(configs.ConfigInfo.DbDatabase)
 	lianjia_status := db.Collection("zhilian_status")
 	var res bson.M
 
@@ -67,8 +65,7 @@ func GetZhilianStatus() (int, int) {
 func SetZhilianStatus(cityIndex int, kwIndex int) {
 	client := GetInstance().client
 	ctx := GetInstance().ctx
-	configInfo := configs.Config()
-	db := client.Database(configInfo["dbDatabase"].(string))
+	db := client.Database(configs.ConfigInfo.DbDatabase)
 	lianjia_status := db.Collection("zhilian_status")
 	lianjia_status.DeleteMany(ctx, bson.M{})
 	lianjia_status.InsertOne(ctx, bson.M{"city_index": cityIndex, "kw_index": kwIndex})
@@ -77,8 +74,7 @@ func SetZhilianStatus(cityIndex int, kwIndex int) {
 func GetLianjiaZuFangStatus() int {
 	client := GetInstance().client
 	ctx := GetInstance().ctx
-	configInfo := configs.Config()
-	db := client.Database(configInfo["dbDatabase"].(string))
+	db := client.Database(configs.ConfigInfo.DbDatabase)
 	lianjia_status := db.Collection("lianjiazf_status")
 	var res bson.M
 	err := lianjia_status.FindOne(ctx, bson.M{}).Decode(&res)
@@ -93,8 +89,7 @@ func GetLianjiaZuFangStatus() int {
 func SetLianjiaZuFangStatus(i int) {
 	client := GetInstance().client
 	ctx := GetInstance().ctx
-	configInfo := configs.Config()
-	db := client.Database(configInfo["dbDatabase"].(string))
+	db := client.Database(configs.ConfigInfo.DbDatabase)
 	lianjia_status := db.Collection("lianjiazf_status")
 	lianjia_status.DeleteMany(ctx, bson.M{})
 	lianjia_status.InsertOne(ctx, bson.M{"index": i})

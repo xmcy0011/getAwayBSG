@@ -2,53 +2,55 @@ package configs
 
 import (
 	"github.com/getAwayBSG/logger"
-	"github.com/micro/go-micro/config"
-	"os"
-	"path/filepath"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 )
 
-type singleton struct {
-	configInfo map[string]interface{}
+// 租房
+type RentCityConfig struct {
+	Link string `yaml:"link"`
+	Name string `yaml:"name"`
 }
 
-var instance *singleton
-var config_path string
+// 智联招聘
+type ZLJob struct {
+	Name     string `yaml"name"`
+	Url      string `yaml:"url"`
+	Code     int    `yaml:"code"`
+	Pinyin   string `yaml:"pinyin"`
+	Priority int    `yaml:"priority"`
+}
 
-func GetInstance() *singleton {
-	if instance == nil {
-		if config_path == "" {
-			instance = new(singleton)
-			dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-			err := config.LoadFile(dir + "/config.yaml")
-			if err != nil {
-				err = config.LoadFile("./config.yaml")
-				if err != nil {
-					logger.Sugar.Error("加载配置文件错误！！请确认当前目录下包含config.yaml文件或者指定配置文件参数")
-					logger.Sugar.Fatal(err)
-				}
-			}
-			conf := config.Map()
-			instance.configInfo = conf
-		} else {
-			instance = new(singleton)
-			err := config.LoadFile(config_path)
-			if err != nil {
-				logger.Sugar.Error("加载配置文件错误！！请确认当前目录下包含config.yaml文件或者指定配置文件参数")
-				logger.Sugar.Fatal(err)
-			}
-			conf := config.Map()
-			instance.configInfo = conf
-		}
+type CrawlerConfig struct {
+	DbRrl                  string `yaml:"dbUrl"`
+	DbDatabase             string `yaml:"dbDatabase"`
+	CollyDatabase          string `yaml:"collyDatabase"`
+	RentCollection         string `yaml:"rentCollection"`
+	CrawlDelay             int    `yaml:"crawlDelay"`
+	CrawlDetailRoutineNum  int    `yaml:"crawlDetailRoutineNum"`
+	TwoHandHouseCollection string `yaml:"twoHandHouseCollection"`
+	ZlDBCollection         string `yaml:"zlDBCollection"`
 
+	ProxyList []string `yaml:"proxyList"`
+
+	ZlKeyWords   []string         `yaml:"zlKeyWords"`
+	CityList     []string         `yaml:"cityList"`
+	RentCityList []RentCityConfig `yaml:"rentCityList"`
+	ZlCityList   []ZLJob          `yaml:"zlCityList"`
+}
+
+// 配置文件信息
+var ConfigInfo = &CrawlerConfig{}
+
+// 加载配置文件
+func LoadConfig(path string) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		logger.Sugar.Error(err.Error())
 	}
-	return instance
-}
 
-func Config() map[string]interface{} {
-
-	return GetInstance().configInfo
-}
-
-func SetConfig(path string) {
-	config_path = path
+	err = yaml.Unmarshal(data, ConfigInfo)
+	if err != nil {
+		logger.Sugar.Error(err.Error())
+	}
 }

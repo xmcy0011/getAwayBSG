@@ -27,12 +27,11 @@ func Start_info(path string) {
 }
 
 func getLianjiaErShouFangStatus() string {
-	configInfo := configs.Config()
 	client := db.GetClient()
 	ctx := db.GetCtx()
 
-	odb := client.Database(configInfo["dbDatabase"].(string))
-	lianjia := odb.Collection(configInfo["dbCollection"].(string))
+	odb := client.Database(configs.ConfigInfo.DbDatabase)
+	lianjia := odb.Collection(configs.ConfigInfo.DbDatabase)
 	lianjia_status := odb.Collection("lianjia_status")
 	var info bson.M
 
@@ -45,12 +44,11 @@ func getLianjiaErShouFangStatus() string {
 }
 
 func getZhiLianStatus() string {
-	configInfo := configs.Config()
 	client := db.GetClient()
 	ctx := db.GetCtx()
 
-	odb := client.Database(configInfo["dbDatabase"].(string))
-	zhilian := odb.Collection(configInfo["zlDBCollection"].(string))
+	odb := client.Database(configs.ConfigInfo.DbDatabase)
+	zhilian := odb.Collection(configs.ConfigInfo.ZlDBCollection)
 	zhilian_status := odb.Collection("zhilian_status")
 
 	zhilianNum, _ := zhilian.CountDocuments(ctx, bson.M{})
@@ -62,12 +60,11 @@ func getZhiLianStatus() string {
 }
 
 func getLianJiaZuFangStatus() string {
-	configInfo := configs.Config()
 	client := db.GetClient()
 	ctx := db.GetCtx()
 
-	odb := client.Database(configInfo["dbDatabase"].(string))
-	lianjiaZf := odb.Collection(configInfo["zufangCollection"].(string))
+	odb := client.Database(configs.ConfigInfo.DbDatabase)
+	lianjiaZf := odb.Collection(configs.ConfigInfo.RentCollection)
 	lianjiaZFStatus := odb.Collection("lianjiazf_status")
 
 	var info bson.M

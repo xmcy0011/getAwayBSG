@@ -9,12 +9,11 @@ import (
 )
 
 func Add(item bson.M) {
-	configInfo := configs.Config()
 	client := GetInstance().client
 	ctx := GetInstance().ctx
 
-	db := client.Database(configInfo["dbDatabase"].(string))
-	lianjia := db.Collection(configInfo["dbCollection"].(string))
+	db := client.Database(configs.ConfigInfo.DbDatabase)
+	lianjia := db.Collection(configs.ConfigInfo.TwoHandHouseCollection)
 	_, err := lianjia.InsertOne(ctx, item)
 	if err != nil {
 		if !strings.Contains(err.Error(), "multiple write errors") {
@@ -25,13 +24,11 @@ func Add(item bson.M) {
 }
 
 func Update(link string, m bson.M) {
-	configInfo := configs.Config()
-
 	client := GetInstance().client
 	ctx := GetInstance().ctx
 
-	db := client.Database(configInfo["dbDatabase"].(string))
-	lianjia := db.Collection(configInfo["dbCollection"].(string))
+	db := client.Database(configs.ConfigInfo.DbDatabase)
+	lianjia := db.Collection(configs.ConfigInfo.TwoHandHouseCollection)
 	_, err := lianjia.UpdateOne(ctx, bson.M{"Link": link}, bson.M{"$set": m})
 	if err != nil {
 		logger.Sugar.Errorf("数据库更新出错:%s", err.Error())
@@ -95,12 +92,11 @@ func AddZLItem(items []interface{}) {
 
 	}
 
-	configInfo := configs.Config()
 	client := GetInstance().client
 	ctx := GetInstance().ctx
 
-	db := client.Database(configInfo["dbDatabase"].(string))
-	lianjia := db.Collection(configInfo["zlDBCollection"].(string))
+	db := client.Database(configs.ConfigInfo.DbDatabase)
+	lianjia := db.Collection(configs.ConfigInfo.ZlDBCollection)
 	_, err := lianjia.InsertMany(ctx, items)
 	if err != nil {
 		if !strings.Contains(err.Error(), "multiple write errors") {
