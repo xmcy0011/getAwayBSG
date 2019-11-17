@@ -119,6 +119,7 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 	areaArr := <-areaListChan
 
 	var page Page
+	var nextPageUrl string
 	var areaName string
 	var areaCount = len(areaArr)
 
@@ -180,26 +181,43 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 			})
 
 			// 下一页
-			element.ForEach(".page-box", func(i int, element *colly.HTMLElement) {
+			element.ForEach(".page-box .house-lst-page-box", func(i int, element *colly.HTMLElement) {
 				var tempPage Page
-				err := json.Unmarshal([]byte(element.ChildAttr(".house-lst-page-box", "page-data")), &tempPage)
+				err := json.Unmarshal([]byte(element.Attr("page-data")), &tempPage)
 				if err == nil {
+					page = tempPage
 					if page.CurPage < page.TotalPage {
 						re, _ := regexp.Compile("pg\\d+/*")
-						nextPageUrl := re.ReplaceAllString(element.Request.URL.String(), "")
-						nextPageUrl = nextPageUrl + "pg" + strconv.Itoa(page.CurPage+1)
-						err = c.Visit(nextPageUrl)
-						if err != nil {
-							logger.Sugar.Info(err)
+						url := re.ReplaceAllString(element.Request.URL.String(), "")
+
+						if tempPage.CurPage == 2 {
+							tempPage.CurPage = tempPage.TotalPage - 1
 						}
+
+						nextPageUrl = url + "pg" + strconv.Itoa(tempPage.CurPage+1)
 					}
 				}
 			})
 		})
 
+		page.CurPage = 1
+		page.TotalPage = 1
 		err := c.Visit(areaArr[areaIndex])
 		if err != nil {
 			logger.Sugar.Debugf("%s:%s", err.Error(), cityUrl)
+		}
+
+		// 一个地区下的所有分页数据
+		for j := page.CurPage; j < page.TotalPage; j++ {
+			err = c.Visit(nextPageUrl)
+			if err != nil {
+				logger.Sugar.Info(err)
+			}
+
+			if page.CurPage != (j + 1) {
+				logger.Sugar.Errorf("修正分页数据，page.CurPage=%d,j=%d，忽略继续", page.CurPage, j)
+				j = page.CurPage
+			}
 		}
 	}
 }
