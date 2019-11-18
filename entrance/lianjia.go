@@ -20,6 +20,9 @@ import (
 	"time"
 )
 
+var crawlerDetailCount = 0               // 总爬取详情数
+var crawlerDetailSuccessCount = int32(0) // 总爬取详情成功数
+
 type Page struct {
 	TotalPage int
 	CurPage   int
@@ -72,7 +75,9 @@ func getListProgress(cityIndex int, cityCount int, areaIndex int, areaCount int,
 }
 
 func getDetailProgress(curCount int, totalCount int) string {
-	return fmt.Sprintf("[2/2][%d/%d]", curCount, totalCount)
+	percent := int(crawlerDetailSuccessCount) * 100 / crawlerDetailCount
+	percentStr := strconv.Itoa(percent) + "%"
+	return fmt.Sprintf("[2/2][%s][%d/%d]", percentStr, crawlerDetailSuccessCount, crawlerDetailCount)
 }
 
 func decimal(value float64) float64 {
@@ -227,8 +232,7 @@ func listCrawler() {
 	}
 }
 
-func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, total int) (successCount int32) {
-	successCount = 0
+func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, total int) {
 	c := colly.NewCollector()
 
 	//设置延时
@@ -388,6 +392,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 				routineIndex, err.Error(), url)
 			db.Update(url, bson.M{"DetailStatus": 1})
 		} else {
+			// 原子操作，多线程安全
+			atomic.AddInt32(&crawlerDetailSuccessCount, 1)
 			logger.Sugar.Infof("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
 				routineIndex, title, houseArr[i].TotalPrice, houseRecordLJ, directionInfo, decorateInfo)
 
@@ -406,18 +412,13 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 				"TransactionAttr": transactionAttr,
 				"BeOnlineTime":    beOnlineTime,
 				"DetailCrawlTime": time.Now()})
-			successCount++
 		}
 		startNum++
 	}
-	return successCount
 }
 
-func crawlerDetail() (successCount int32, total int) {
+func crawlerDetail() {
 	var routineCount int = 0
-
-	total = 0
-	successCount = 0
 
 	client := db.GetClient()
 	ctx := db.GetCtx()
@@ -437,21 +438,21 @@ func crawlerDetail() (successCount int32, total int) {
 		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
 		return
 	}
-	total = len(houseArr)
+	crawlerDetailCount = len(houseArr)
 	defer cur.Close(ctx)
 
 	routineCount = configs.ConfigInfo.CrawlDetailRoutineNum
-	logger.Sugar.Infof("[2/2] 开始抓取二手房详情,总数=%d,并行抓取协程数=%d", total, routineCount)
+	logger.Sugar.Infof("[2/2] 开始抓取二手房详情,总数=%d,并行抓取协程数=%d", crawlerDetailCount, routineCount)
 
 	var wg sync.WaitGroup
 	for j := 0; j < int(routineCount); j++ {
-		perCount := total / int(routineCount)
+		perCount := crawlerDetailCount / routineCount
 		var tempHouseArr []HouseInfo
 		var startCount = j * perCount
 		var endCount int
 		if (j + 1) == int(routineCount) {
-			endCount = total
-			tempHouseArr = houseArr[startCount:total] // 除不尽的，全部交给最后一个协程
+			endCount = crawlerDetailCount
+			tempHouseArr = houseArr[startCount:crawlerDetailCount] // 除不尽的，全部交给最后一个协程
 		} else {
 			endCount = (j + 1) * perCount
 			tempHouseArr = houseArr[startCount:endCount]
@@ -461,15 +462,12 @@ func crawlerDetail() (successCount int32, total int) {
 		go func(startNum int, routineIndex int, houseArr []HouseInfo) {
 			defer wg.Add(-1)
 			// 1协程抓取一组数据
-			count := crawlerOneDetail(startNum, routineIndex, tempHouseArr, total)
-			// 原子操作，多线程安全
-			atomic.AddInt32(&successCount, count)
+			crawlerOneDetail(startNum, routineIndex, tempHouseArr, crawlerDetailCount)
 		}(j*perCount, j, tempHouseArr)
 		logger.Sugar.Infof("[2/2] 第 %d 组协程抓取 [%d-%d] 的房屋详情", j+1, startCount, endCount)
 	}
 
 	wg.Wait() // 等待所有协程完成
-	return successCount, total
 }
 
 func StartLJSecondHandHouse() {
@@ -486,10 +484,10 @@ func StartLJSecondHandHouse() {
 	// 抓详情
 	logger.Sugar.Info("[2/2] 开始抓取城市二手房详细信息")
 	time.Sleep(time.Second * 3)
-	successCount, total := crawlerDetail()
-	if successCount == 0 {
+	crawlerDetail()
+	if crawlerDetailSuccessCount == 0 {
 		logger.Sugar.Error("[2/2] 抓取详情失败,没有数据，结束二手房抓取!")
 	} else {
-		logger.Sugar.Infof("[2/2] 抓取详情完成，成功数=%d,总数=%d，结束二手房抓取!", successCount, total)
+		logger.Sugar.Infof("[2/2] 抓取详情完成，成功数=%d,总数=%d，结束二手房抓取!", crawlerDetailSuccessCount, crawlerDetailCount)
 	}
 }
