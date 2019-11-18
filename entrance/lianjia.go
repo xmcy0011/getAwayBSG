@@ -213,6 +213,7 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 			err = c.Visit(nextPageUrl)
 			if err != nil {
 				logger.Sugar.Info(err)
+				continue
 			}
 
 			if page.CurPage != (j + 1) {
