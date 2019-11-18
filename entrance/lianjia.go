@@ -182,7 +182,7 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 				logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
 					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
 
-				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "ListCrawlTime": time.Now()})
+				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "ListCrawlTime": time.Now()}, link)
 			})
 
 			// 下一页
@@ -390,7 +390,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 		if err != nil {
 			logger.Sugar.Errorf("%s[协程%d],抓取失败:%s,url=%s", getDetailProgress(startNum+1, total),
 				routineIndex, err.Error(), url)
-			db.Update(url, bson.M{"DetailStatus": 1})
+			db.Update(url, bson.M{"DetailStatus": 2})
 		} else {
 			// 原子操作，多线程安全
 			atomic.AddInt32(&crawlerDetailSuccessCount, 1)

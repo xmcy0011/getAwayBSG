@@ -8,12 +8,19 @@ import (
 	"strings"
 )
 
-func Add(item bson.M) {
+func Add(item bson.M, link string) {
 	client := GetInstance().client
 	ctx := GetInstance().ctx
 
 	db := client.Database(configs.ConfigInfo.DbDatabase)
 	lianjia := db.Collection(configs.ConfigInfo.TwoHandHouseCollection)
+
+	// 去重
+	res := lianjia.FindOne(ctx, bson.M{"Link": link})
+	if res.Err() == nil {
+		return
+	}
+
 	_, err := lianjia.InsertOne(ctx, item)
 	if err != nil {
 		if !strings.Contains(err.Error(), "multiple write errors") {
