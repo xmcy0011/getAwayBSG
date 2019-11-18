@@ -423,7 +423,7 @@ func crawlerDetail() (successCount int32, total int) {
 	ctx := db.GetCtx()
 
 	odb := client.Database(configs.ConfigInfo.DbDatabase)
-	dbCollection := odb.Collection(configs.ConfigInfo.DbDatabase)
+	dbCollection := odb.Collection(configs.ConfigInfo.TwoHandHouseCollection)
 
 	//读取出全部需要抓取详情的数据
 	cur, err := dbCollection.Find(ctx, bson.M{"DetailStatus": 0})
