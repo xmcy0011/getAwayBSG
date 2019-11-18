@@ -18,14 +18,6 @@
   version = "v1.5.0"
 
 [[projects]]
-  digest = "1:90afd0cfdffcc3df7855160ee2954cbca286e23c4eb9cb3d075536c9e4e1b04f"
-  name = "github.com/agext/levenshtein"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0ded9c86537917af2ff89bc9c78de6bd58477894"
-  version = "v1.2.2"
-
-[[projects]]
   digest = "1:24ffaa1636eba8f0cfc7671121d05a9a2040605adb1927a93be88fbc2ea6cfdb"
   name = "github.com/andybalholm/cascadia"
   packages = ["."]
@@ -58,22 +50,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:2bf7da77216264bb61bd8cb5f3380a03ab509e8a826fe359008d4a6ba0789b13"
-  name = "github.com/apparentlymart/go-textseg"
-  packages = ["textseg"]
-  pruneopts = "UT"
-  revision = "fb01f485ebef760e5ee06d55e1b07534dda2d295"
-  version = "v1.0.0"
-
-[[projects]]
-  digest = "1:b520b55fc1146c5b0eea03b07233f7a3d4a9be985c037c91ea6b82ecb81bd521"
-  name = "github.com/bitly/go-simplejson"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "aabad6e819789e569bd6aabf444c935aa9ba1e44"
-  version = "v0.5.0"
-
-[[projects]]
   digest = "1:865079840386857c809b72ce300be7580cb50d3d3129ce11bf9aa6ca2bc1934a"
   name = "github.com/fatih/color"
   packages = ["."]
@@ -82,28 +58,12 @@
   version = "v1.7.0"
 
 [[projects]]
-  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
-  name = "github.com/fsnotify/fsnotify"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
-  version = "v1.4.7"
-
-[[projects]]
   branch = "master"
   digest = "1:7267985ac768bee2587a268e27f33ecc89c4fb1f07a05605ae7f4c15c9ce9616"
   name = "github.com/getwe/figlet4go"
   packages = ["."]
   pruneopts = "UT"
   revision = "bc879344e874dd110753d17083a2a7acf3136683"
-
-[[projects]]
-  digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
-  name = "github.com/ghodss/yaml"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
@@ -169,22 +129,6 @@
   revision = "ff6b7dc882cf4cfba7ee0b9f7dcc1ac096c554aa"
 
 [[projects]]
-  digest = "1:6c350fef24a4a1b89709569f6d910c916dd2df8afa2478cc2f80d931d2378bd4"
-  name = "github.com/hashicorp/hcl"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "4e12e081a1db0d4a63805477f4cf661ecf7b452c"
-  version = "v2.0.0"
-
-[[projects]]
-  digest = "1:78d28d5b84a26159c67ea51996a230da4bc07cac648adaae1dfb5fc0ec8e40d3"
-  name = "github.com/imdario/mergo"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "1afb36080aec31e0d1528973ebe6721b191b0369"
-  version = "v0.3.8"
-
-[[projects]]
   digest = "1:e30ac47ee84d7d354e0a284cf742e3015400667e90aa3d6ae99c7a55da67c645"
   name = "github.com/kennygrant/sanitize"
   packages = ["."]
@@ -207,36 +151,6 @@
   pruneopts = "UT"
   revision = "88ba11cfdc67c7588b30042edf244b2875f892b6"
   version = "v0.0.10"
-
-[[projects]]
-  digest = "1:329695884db26feb37c0763c2992fb68ded0238254f77f3d9b5ca01314eac7aa"
-  name = "github.com/micro/go-micro"
-  packages = [
-    "config",
-    "config/encoder",
-    "config/encoder/hcl",
-    "config/encoder/json",
-    "config/encoder/toml",
-    "config/encoder/xml",
-    "config/encoder/yaml",
-    "config/loader",
-    "config/loader/memory",
-    "config/reader",
-    "config/reader/json",
-    "config/source",
-    "config/source/file",
-  ]
-  pruneopts = "UT"
-  revision = "a9e8fc60391ea6451ae89c266bf8edaa66b7f536"
-  version = "v1.16.0"
-
-[[projects]]
-  digest = "1:abf08734a6527df70ed361d7c369fb580e6840d8f7a6012e5f609fdfd93b4e48"
-  name = "github.com/mitchellh/go-wordwrap"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "9e67c67572bc5dd02aef930e2b0ae3c02a4b5a5c"
-  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -269,19 +183,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "73f8eece6fdcd902c185bf651de50f3828bed5ed"
-
-[[projects]]
-  digest = "1:c21d2ff7c6577efcd731da470aeb5e5ce7a2ee3327b80da04e188d70ca3a46b7"
-  name = "github.com/zclconf/go-cty"
-  packages = [
-    "cty",
-    "cty/convert",
-    "cty/function",
-    "cty/set",
-  ]
-  pruneopts = "UT"
-  revision = "01e2a242a65eb6f8ee372ddcea68c111fd4da15e"
-  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -545,7 +446,6 @@
     "github.com/gocolly/colly",
     "github.com/gocolly/colly/extensions",
     "github.com/gocolly/colly/proxy",
-    "github.com/micro/go-micro/config",
     "github.com/zolamk/colly-mongo-storage/colly/mongo",
     "go.mongodb.org/mongo-driver/bson",
     "go.mongodb.org/mongo-driver/mongo",
@@ -554,6 +454,7 @@
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "gopkg.in/natefinch/lumberjack.v2",
+    "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
