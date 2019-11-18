@@ -190,10 +190,6 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 						re, _ := regexp.Compile("pg\\d+/*")
 						url := re.ReplaceAllString(element.Request.URL.String(), "")
 
-						if tempPage.CurPage == 2 {
-							tempPage.CurPage = tempPage.TotalPage - 1
-						}
-
 						nextPageUrl = url + "pg" + strconv.Itoa(tempPage.CurPage+1)
 					}
 				}
