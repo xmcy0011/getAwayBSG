@@ -43,12 +43,12 @@ func main() {
 		configs.LoadConfig("config.yaml")
 	}
 	logger.Sugar.Infof("dbAddress=%s,dbName=%s", configs.ConfigInfo.DbRrl, configs.ConfigInfo.DbDatabase)
-	entrance.Start_clean()
 
 	//进入不同入口
 	if lianjiaErshou {
+		entrance.CleanVisit()
 		logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
-		entrance.StartLJSecondHandHouse()
+		entrance.StartLJSecondHandHouse(true)
 	} else if lianjiaZufang {
 		entrance.Start_LianjiaZufang()
 	} else if zhilian {
@@ -56,12 +56,44 @@ func main() {
 	} else {
 		fmt.Println("每次抓取都是全量的!")
 		flag.Usage()
+
+		choice()
 	}
 	//else if clean {
 	//	entrance.Start_clean()
 	//} else if info {
 	//	entrance.Start_info(infoSaveTo)
 	//}
+}
+
+func choice() {
+	var choice int
+	for ; ; {
+		logger.Sugar.Info("请选择任务")
+		logger.Sugar.Info("1.爬取链家二手房（全量）")
+		logger.Sugar.Info("2.爬取链家二手房（详情）")
+		//logger.Sugar.Info("3.爬智联")
+		//logger.Sugar.Info("4.链家租房")
+
+		_, err := fmt.Scanln(&choice)
+		if err == nil {
+			if choice == 1 {
+				entrance.CleanVisit()
+				logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
+				entrance.StartLJSecondHandHouse(true)
+				break
+			} else if choice == 2 {
+				entrance.CleanVisit()
+				logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
+				entrance.StartLJSecondHandHouse(false)
+				break
+			} else {
+				logger.Sugar.Info("选择错误！")
+			}
+		} else {
+			logger.Sugar.Error("选择错误:" + err.Error())
+		}
+	}
 }
 
 func printIcon() {

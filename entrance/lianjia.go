@@ -471,16 +471,20 @@ func crawlerDetail() {
 	wg.Wait() // 等待所有协程完成
 }
 
-func StartLJSecondHandHouse() {
-	listFlag := make(chan int)
-	go func() {
-		logger.Sugar.Info("[1/2] 开始抓取城市二手房概要信息")
-		listCrawler()
-		listFlag <- 1 //列表抓取完成
-	}()
+// 开始抓取链家二手房（先抓取概要列表、完成后再批量抓取二手房详情）
+// @param crawlerList:是否抓取列表
+func StartLJSecondHandHouse(crawlerList bool) {
+	if crawlerList {
+		listFlag := make(chan int)
+		go func() {
+			logger.Sugar.Info("[1/2] 开始抓取城市二手房概要信息")
+			listCrawler()
+			listFlag <- 1 //列表抓取完成
+		}()
 
-	//阻塞主线程，等待列表抓取
-	<-listFlag
+		//阻塞主线程，等待列表抓取
+		<-listFlag
+	}
 
 	// 抓详情
 	logger.Sugar.Info("[2/2] 开始抓取城市二手房详细信息")
