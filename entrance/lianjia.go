@@ -1,6 +1,7 @@
 package entrance
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/getAwayBSG/configs"
@@ -11,6 +12,8 @@ import (
 	"github.com/gocolly/colly/proxy"
 	cachemongo "github.com/zolamk/colly-mongo-storage/colly/mongo"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -474,6 +477,11 @@ func crawlerDetail() {
 // 开始抓取链家二手房（先抓取概要列表、完成后再批量抓取二手房详情）
 // @param crawlerList:是否抓取列表
 func StartLJSecondHandHouse(crawlerList bool) {
+	if err := pingMongoDb(); err != nil {
+		logger.Sugar.Errorf("mongoDb connected error:%s", err.Error())
+		return
+	}
+
 	if crawlerList {
 		listFlag := make(chan int)
 		go func() {
@@ -495,4 +503,16 @@ func StartLJSecondHandHouse(crawlerList bool) {
 	} else {
 		logger.Sugar.Infof("[2/2] 抓取详情完成，成功数=%d,总数=%d，结束二手房抓取!", crawlerDetailSuccessCount, crawlerDetailCount)
 	}
+}
+
+func pingMongoDb() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/" + configs.ConfigInfo.DbDatabase))
+	if err := client.Connect(ctx); err != nil {
+		return err
+	}
+	defer client.Disconnect(ctx)
+	return nil
 }

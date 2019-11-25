@@ -11,6 +11,8 @@ import (
 )
 
 func CleanVisit() {
+	logger.Sugar.Info("clear colly cookies and visited...")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
