@@ -506,13 +506,17 @@ func StartLJSecondHandHouse(crawlerList bool) {
 }
 
 func pingMongoDb() error {
+	logger.Sugar.Info("ping mongoDb,timeout 10s ...")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/" + configs.ConfigInfo.DbDatabase))
+	defer client.Disconnect(ctx)
 	if err := client.Connect(ctx); err != nil {
 		return err
 	}
-	defer client.Disconnect(ctx)
+
+	logger.Sugar.Info("ping mongoDb success")
 	return nil
 }
