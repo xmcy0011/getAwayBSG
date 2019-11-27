@@ -1,3 +1,12 @@
+# mysql 连接信息
+# 目前抓取链家二手房使用mysql存储，其他租房、招聘等信息代码未调试通过，不建议使用
+mysqlHost: "127.0.0.1"
+mysqlPort: 3306
+mysqlDbName: "go_crawler"
+mysqlUserName: "crawler"
+mysqlPassword: "12345"
+mysqlMaxConnCnt: 4
+
 #MongoDB 连接URL
 dbUrl: mongodb://106.14.172.35:27017
 

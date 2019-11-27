@@ -22,6 +22,14 @@ type ZLJob struct {
 }
 
 type CrawlerConfig struct {
+	// mysql 地址信息
+	MysqlHost       string `yaml:"mysqlHost"`
+	MysqlPort       int    `yaml:"mysqlPort"`
+	MysqlDbName     string `yaml:"mysqlDbName"`
+	MysqlUserName   string `yaml:"mysqlUserName"`
+	MysqlPassword   string `yaml:"mysqlPassword"`
+	MysqlMaxConnCnt int    `yaml:"mysqlMaxConnCnt"`
+
 	DbRrl                  string `yaml:"dbUrl"`
 	DbDatabase             string `yaml:"dbDatabase"`
 	CollyDatabase          string `yaml:"collyDatabase"`

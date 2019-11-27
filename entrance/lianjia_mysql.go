@@ -1,25 +1,15 @@
 package entrance
 
-
-// del 2019-11-27
-// mongodb比较占用内存，1GB云服务器经常mongodb出现崩溃，故建议使用mysql
-// 代码经过测试可用，只需解开注释即可
-
-/*
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/getAwayBSG/configs"
 	"github.com/getAwayBSG/db"
+	"github.com/getAwayBSG/db/mysql"
 	"github.com/getAwayBSG/logger"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
 	"github.com/gocolly/colly/proxy"
-	cachemongo "github.com/zolamk/colly-mongo-storage/colly/mongo"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -120,13 +110,16 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 
 	extensions.RandomUserAgent(c)
 	extensions.Referer(c)
-	storage := &cachemongo.Storage{
-		Database: "colly",
-		URI:      configs.ConfigInfo.DbRrl + "/colly",
-	}
-	if err := c.SetStorage(storage); err != nil {
-		panic(err)
-	}
+	// use memory storage
+	/*
+		storage := &cachemongo.Storage{
+			Database: "colly",
+			URI:      configs.ConfigInfo.DbRrl + "/colly",
+		}
+		if err := c.SetStorage(storage); err != nil {
+			panic(err)
+		}
+	*/
 
 	areaListChan := make(chan []string, 1)
 	getAeraUrl(cityUrl, areaListChan)
@@ -271,13 +264,15 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	//自动referer
 	extensions.Referer(c)
 	//设置MongoDB存储状态信息
-	storage := &cachemongo.Storage{
-		Database: "colly",
-		URI:      configs.ConfigInfo.DbRrl + "/colly",
-	}
-	if err := c.SetStorage(storage); err != nil {
-		panic(err)
-	}
+	// use memory storage
+	/*
+		storage := &cachemongo.Storage{
+			Database: "colly",
+			URI:      configs.ConfigInfo.DbRrl + "/colly",
+		}
+		if err := c.SetStorage(storage); err != nil {
+			panic(err)
+		}*/
 
 	var roomInfo string  // 户型,3室1厅
 	var floorInfo string // 楼层,低楼层/共17层
@@ -483,8 +478,19 @@ func crawlerDetail() {
 // 开始抓取链家二手房（先抓取概要列表、完成后再批量抓取二手房详情）
 // @param crawlerList:是否抓取列表
 func StartLJSecondHandHouse(crawlerList bool) {
-	if err := pingMongoDb(); err != nil {
-		logger.Sugar.Errorf("mongoDb connected error:%s", err.Error())
+	dbConfig := make([]mysql.DatabaseConfig, 1)
+	dbConfig[0] = mysql.DatabaseConfig{
+		ServerName: "Master",
+		Host:       configs.ConfigInfo.MysqlHost,
+		Port:       configs.ConfigInfo.MysqlPort,
+		DbName:     configs.ConfigInfo.MysqlDbName,
+		Username:   configs.ConfigInfo.MysqlUserName,
+		Password:   configs.ConfigInfo.MysqlPassword,
+		MaxConnCnt: configs.ConfigInfo.MysqlMaxConnCnt,
+	}
+	err := mysql.DefaultManager.Init(dbConfig)
+	if err != nil {
+		logger.Sugar.Errorf("初始化mysql连接失败(%s)，结束抓取...", err.Error())
 		return
 	}
 
@@ -510,21 +516,3 @@ func StartLJSecondHandHouse(crawlerList bool) {
 		logger.Sugar.Infof("[2/2] 抓取详情完成，成功数=%d,总数=%d，结束二手房抓取!", crawlerDetailSuccessCount, crawlerDetailCount)
 	}
 }
-
-func pingMongoDb() error {
-	logger.Sugar.Info("ping mongoDb,timeout 10s ...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/" + configs.ConfigInfo.DbDatabase))
-	defer client.Disconnect(ctx)
-	if err := client.Connect(ctx); err != nil {
-		return err
-	}
-
-	logger.Sugar.Info("ping mongoDb success")
-	return nil
-}
-
-*/
