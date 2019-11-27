@@ -2,21 +2,24 @@
 dburl: mongodb://127.0.0.1:27017
 
 # MongoDB 数据库名
-dbDatabase: pachong
+dbDatabase: crawler
 
 # 抓取状态记录，这个库不可改名，如果启用了权限管理需要添加这个库的权限
 collyDatabase: colly
 
 # 租房存储数据集合
-zufangCollection: lianjia_zufang
+rentCollection: lianjia_zufang
 
-# 抓取间隔时间 单位秒
-crawlDelay: 3
+# 抓取间隔时间 单位毫秒(随机)
+crawlDelay: 1000
+
+# 抓取二手房详情写协程数（整数为好，1-16，建议2/4/8）
+crawlDetailRoutineNum: 8
 
 # MongoDB 集合名
 # 存链家的数据
 # 自己添加Link 字段的唯一键，不然有重复
-dbCollection: lianjia
+twoHandHouseCollection: lianjia
 
 # 存智联的数据
 # 自己添加positionURL 字段的唯一键，不然有重复
