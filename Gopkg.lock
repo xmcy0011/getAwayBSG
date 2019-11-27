@@ -66,6 +66,14 @@
   revision = "bc879344e874dd110753d17083a2a7acf3136683"
 
 [[projects]]
+  digest = "1:ec6f9bf5e274c833c911923c9193867f3f18788c461f76f05f62bb1510e0ae65"
+  name = "github.com/go-sql-driver/mysql"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "72cd26f257d44c1114970e19afddcd812016007e"
+  version = "v1.4.1"
+
+[[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
   name = "github.com/go-stack/stack"
   packages = ["."]
@@ -372,9 +380,10 @@
   revision = "5a76f03bc7c327212912ed6b2a76a10d7f39b224"
 
 [[projects]]
-  digest = "1:e0a1881f9e0564bebdeac98c75e59f07acdde6ed3a5396e0e613eaad31194866"
+  digest = "1:602f92501b1cc299f1febc5febb27acdf80c4bc70aaa833942e8000e2e77ddee"
   name = "google.golang.org/appengine"
   packages = [
+    "cloudsql",
     "internal",
     "internal/base",
     "internal/datastore",
@@ -443,6 +452,7 @@
   input-imports = [
     "github.com/fatih/color",
     "github.com/getwe/figlet4go",
+    "github.com/go-sql-driver/mysql",
     "github.com/gocolly/colly",
     "github.com/gocolly/colly/extensions",
     "github.com/gocolly/colly/proxy",
