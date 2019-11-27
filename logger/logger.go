@@ -65,7 +65,7 @@ func NewEncoderConfig() zapcore.EncoderConfig {
 func InitLogger(filename string, level string) {
 	w := zapcore.AddSync(&lumberjack.Logger{
 		Filename:   filename,
-		MaxSize:    500, // megabytes
+		MaxSize:    50, // megabytes
 		MaxBackups: 3,
 		MaxAge:     28, // days
 		Compress:   true,
