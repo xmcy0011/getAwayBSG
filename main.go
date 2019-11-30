@@ -46,7 +46,6 @@ func main() {
 
 	//进入不同入口
 	if lianjiaErshou {
-		entrance.CleanVisit()
 		logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
 		entrance.StartLJSecondHandHouse(true)
 	} else if lianjiaZufang {
