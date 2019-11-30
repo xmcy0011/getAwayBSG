@@ -17,112 +17,122 @@
 > 2.运行的时候为被爬方考虑下！尽量不要爬全站。请在配置文件中设置你需要的城市爬取即可！\
 > 3.[项目主页](https://jinnrry.github.io/getAwayBSG/)里面有现成数据，不需要你自己动手运行爬虫 
 
+## 进度
 
-## 啥？
+PS：原项目地址https://jinnrry.github.io/getAwayBSG/  
+> 如果你是一个正准备逃离北上广等一线城市却又找不到去处的IT人士，或许这个项目能给你点建议。  
+> 通过爬虫，抓取了链接、智联的工作，租房，二手房一系列数据，为你提供各城市的宏观分析数据
 
-如果你是一个正准备逃离北上广等一线城市却又找不到去处的IT人士，或许这个项目能给你点建议。
+- [x] 打印logo
+- [x] 链家二手房抓取
+    - [x] 多线程
+    - [x] mongodb
+    - [x] 抓取房屋概要(单线程)/详情(多线程)
+    - [x] 按区抓取城市
+    - [x] 记录城市名
+- [ ] 链家租房抓取
+- [ ] 智联招聘
 
-通过爬虫，抓取了链接、智联的工作，租房，二手房一系列数据，为你提供各城市的宏观分析数据
 
-## 安装
 
-从[releases](https://github.com/jinnrry/getAwayBSG/releases)下载对应操作系统，对应平台的二进制文件和配置文件模板
+## 安装编译
 
-## 配置
+```bash
+cat /etc/redhat-release # 作者Linux环境 x64
+# CentOS Linux release 7.6.1810 (Core)
+```
 
-打开配置文件你就知道了
+### mongodb
+1.创建仓库文件
+```bash
+vi /etc/yum.repos.d/mongodb-org-3.4.repo
+
+#  然后复制下面配置,保存退出
+[mongodb-org-3.4]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/3.4/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc
+```
+
+2.安装配置
+```bash
+yum install -y mongodb-org # 安装
+
+vim /etc/mongod.conf
+
+# 更改数据存储目录，默认/var/log/mongodb
+dbPath: /data/db
+```
+
+3.启动
+```bash
+systemctl restart mongod # 启动mongodb
+systemctl enable mongod # 开启启动，可选
+```
+
+### golang
+```bash
+yum install golang # 安装go
+
+# 配置go root和 go path
+vim /etc/profile
+#golang
+export GOROOT=/usr/lib/golang
+export GOPATH=/data/go  # 这个是存放代码位置
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+
+source /etc/profile # 生效
+go env # 确认
+```
+
+### 编译
+```bash
+cd /data/go # go path 的路径
+mkdir src && cd src
+mkdir github.com && cd github.com
+git clone https://github.com/xmcy0011/getAwayBSG.git 
+cd getAwayBSG
+go build # 编译
+cp getAwayBSG bin/ # 把程序拷贝到bin目录
+./getAwayBSG # 运行，运行前请先确认config.yaml里面的配置信息
+```
 
 ## 运行
 
-链家二手房数据抓取
-
-```
-getAwayBSG -config=config.yaml -lianjia_ershou
-```
-
-链家租房数据抓取
-
-```
-getAwayBSG -config=config.yaml -lianjia_zufang
-```
-
-智联招聘数据抓取
-
-```
-getAwayBSG -config=config.yaml -zhilian
-```
-
-其他命令
-
-1.clean
-
-清除缓存状态，抓取过程中会将抓取进度保存到mongodb，每次启动会从上次位置继续抓取，如果你需要清除缓存状态，执行
-```
-getAwayBSG -clean 
-```
-该命令支持脚本调用
-```
-getAwayBSG -clean [option]
-```
-
-option支持：lianjia_ershou、zhilian、lianjia_zufang
-
-2.info
-
-方便定时脚本记录抓取情况，使用info命令可以输出当前抓取数据量到文件
-
-```
-getAwayBSG -info -info_save_to=./numLog.txt
-```
-
-使用-info_save_to参数指定文件保存位置，默认为当前目录的numLog.txt文件中
-
-3.help
-
-输出支持的全部命令列表
-
-```
-getAwayBSG -help
-```
-
-
-## 数据分析
-
-分析用的MongoDB语句在[Query.js](./Query.js)文件中，使用MongoDB执行即可
-
-## 编译
-1.use dep(mac osx)
-```shell script
-env http_proxy=http://127.0.0.1:60339 https_proxy=http://127.0.0.1:60339 dep ensure -v
-# 如果是执行dep init -v，编译时出差：
-# vendor/github.com/micro/go-micro/config/encoder/hcl/hcl.go:17:9: undefined: hcl.Unmarshal
-# 需手动替换
-cp -rf hashicorp /Users/xuyc/repo/go/src/github.com/getAwayBSG/vendor/github.com
-```
-
-
-编译使用xgo，需要先安装docker  
-2.use manual  
+1.配置要抓取的城市 config.yaml  
+2.运行
 ```bash
-# GOPATH="/Users/xmcy0011/repo/go"
-
-cd /Users/xmcy0011/repo/go/src
-
-mkdir github.com
-
-cd github.com
-
-git clone https://github.com/xmcy0011/getAwayBSG
-
-docker pull karalabe/xgo-latest
-
-go get github.com/karalabe/xgo
-
-cd getAwayBSG
-
-sh ./build.sh
+./getAwayBSG # 第一次可选择1，抓取概要列表后，会自动抓取详情，如果中途中断，下次运行选2即可
 ```
 
-## 部署
+```shell script
+  _______  _______ .___________.     ___      ____    __    ____      ___      ____    ____ .______        _______.  _______ 
+ /  _____||   ____||           |    /   \     \   \  /  \  /   /     /   \     \   \  /   / |   _  \      /       | /  _____|
+|  |  __  |  |__   `---|  |----`   /  ^  \     \   \/    \/   /     /  ^  \     \   \/   /  |  |_)  |    |   (----`|  |  __  
+|  | |_ | |   __|      |  |       /  /_\  \     \            /     /  /_\  \     \_    _/   |   _  <      \   \    |  | |_ | 
+|  |__| | |  |____     |  |      /  _____  \     \    /\    /     /  _____  \      |  |     |  |_)  | .----)   |   |  |__| | 
+ \______| |_______|    |__|     /__/     \__\     \__/  \__/     /__/     \__\     |__|     |______/  |_______/     \______| 
+                                                                                                                             
+2019-11-30 17:05:21.472 [INFO]  [getAwayBSG/main.go:45] dbAddress=mongodb://106.14.172.35:27017,dbName=crawler
+每次抓取都是全量的!
+Usage of ./getAwayBSG:
+  -config string
+        设置配置文件 (default "./config.yaml")
+  -help
+        显示帮助
+  -lianjia_ershou
+        抓取链家二手房数据
+  -lianjia_zufang
+        抓取链家租房数据
+  -zhilian
+        抓取智联招聘数据
+2019-11-30 17:05:21.473 [INFO]  [getAwayBSG/main.go:72] 请选择任务
+2019-11-30 17:05:21.473 [INFO]  [getAwayBSG/main.go:73] 1.爬取链家二手房（全量）
+2019-11-30 17:05:21.473 [INFO]  [getAwayBSG/main.go:74] 2.爬取链家二手房（详情）
+```
 
-如果需要分布式或者多进程抓取，在不同机器或者多个进程中指定相同的MongoDB源即可，程序已经支持分布式多进程抓取了。已抓取的链接和状态会通过MongoDB共享
+## Contact
+
+email: xmcy0011@sina.com
