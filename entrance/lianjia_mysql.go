@@ -1,25 +1,14 @@
 package entrance
 
-
-// del 2019-11-27
-// mongodb比较占用内存，1GB云服务器经常mongodb出现崩溃，故建议使用mysql
-// 代码经过测试可用，只需解开注释即可
-
-/*
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/getAwayBSG/configs"
-	"github.com/getAwayBSG/db"
+	"github.com/getAwayBSG/db/mysql"
 	"github.com/getAwayBSG/logger"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
 	"github.com/gocolly/colly/proxy"
-	cachemongo "github.com/zolamk/colly-mongo-storage/colly/mongo"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -35,12 +24,6 @@ var crawlerDetailSuccessCount = int32(0) // 总爬取详情成功数
 type Page struct {
 	TotalPage int
 	CurPage   int
-}
-
-type HouseInfo struct {
-	Title      string `json:"title"`
-	Link       string `json:"link"`
-	TotalPrice int32  `json:"total_price"`
 }
 
 func getAeraUrl(cityUrl string, areaListChan chan []string) {
@@ -120,13 +103,16 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 
 	extensions.RandomUserAgent(c)
 	extensions.Referer(c)
-	storage := &cachemongo.Storage{
-		Database: "colly",
-		URI:      configs.ConfigInfo.DbRrl + "/colly",
-	}
-	if err := c.SetStorage(storage); err != nil {
-		panic(err)
-	}
+	// use memory storage
+	/*
+		storage := &cachemongo.Storage{
+			Database: "colly",
+			URI:      configs.ConfigInfo.DbRrl + "/colly",
+		}
+		if err := c.SetStorage(storage); err != nil {
+			panic(err)
+		}
+	*/
 
 	areaListChan := make(chan []string, 1)
 	getAeraUrl(cityUrl, areaListChan)
@@ -191,7 +177,7 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 				logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
 					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
 
-				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "ListCrawlTime": time.Now()}, link)
+				mysql.DefaultTwoSecondHoseDao.Add(title, iPrice, iUnitPrice, link)
 			})
 
 			// 下一页
@@ -242,7 +228,7 @@ func listCrawler() {
 	}
 }
 
-func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, total int) {
+func crawlerOneDetail(startNum int, routineIndex int, houseArr []mysql.HouseInfo, total int) {
 	c := colly.NewCollector()
 
 	//设置延时
@@ -271,13 +257,15 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	//自动referer
 	extensions.Referer(c)
 	//设置MongoDB存储状态信息
-	storage := &cachemongo.Storage{
-		Database: "colly",
-		URI:      configs.ConfigInfo.DbRrl + "/colly",
-	}
-	if err := c.SetStorage(storage); err != nil {
-		panic(err)
-	}
+	// use memory storage
+	/*
+		storage := &cachemongo.Storage{
+			Database: "colly",
+			URI:      configs.ConfigInfo.DbRrl + "/colly",
+		}
+		if err := c.SetStorage(storage); err != nil {
+			panic(err)
+		}*/
 
 	var roomInfo string  // 户型,3室1厅
 	var floorInfo string // 楼层,低楼层/共17层
@@ -285,7 +273,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	var directionInfo string // 朝向,南北
 	var decorateInfo string  // 装修,平层/精装
 
-	var size float64         // 大小,平米
+	var size float32         // 大小,平米
 	var completedInfo string // 竣工时间,2007年建/板楼
 
 	var villageName string   // 小区名称
@@ -327,7 +315,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 			if err != nil {
 				value = 0
 			}
-			size = decimal(value) // 保留2位小数
+			size = float32(decimal(value)) // 保留2位小数
 		})
 		element.ForEach(".subInfo", func(i int, element *colly.HTMLElement) {
 			completedInfo = element.Text
@@ -381,7 +369,14 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 					if i == 0 {
 						liText = element.Text + ":"
 					} else {
-						liText += element.Text
+						if liText == "抵押信息:" {
+							bettyString := strings.TrimSpace(element.Text)
+							bettyString = strings.ReplaceAll(bettyString, "\\n", "")
+							liText += bettyString
+						} else {
+							liText += element.Text
+						}
+
 					}
 				})
 				transactionAttr += liText + "|"
@@ -395,61 +390,58 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	})
 
 	for i := range houseArr {
-		url := houseArr[i].Link
+		transactionAttr = ""
+		baseAttr = ""
+
+		var house = houseArr[i]
+		url := house.Link
 		err := c.Visit(url)
 		if err != nil {
 			logger.Sugar.Errorf("%s[协程%d],抓取失败:%s,url=%s", getDetailProgress(startNum+1, total),
 				routineIndex, err.Error(), url)
-			db.Update(url, bson.M{"DetailStatus": 2})
+			_ = mysql.DefaultTwoSecondHoseDao.Update2(house.Id, 2)
 		} else {
 			// 原子操作，多线程安全
 			atomic.AddInt32(&crawlerDetailSuccessCount, 1)
 			logger.Sugar.Infof("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
 				routineIndex, title, houseArr[i].TotalPrice, houseRecordLJ, directionInfo, decorateInfo)
 
-			db.Update(url, bson.M{
-				"DetailStatus":    1,
-				"RoomInfo":        roomInfo,
-				"FloorInfo":       floorInfo,
-				"DirectionInfo":   directionInfo,
-				"DecorateInfo":    decorateInfo,
-				"Size":            size,
-				"CompletedInfo":   completedInfo,
-				"VillageName":     villageName,
-				"AreaName":        areaName,
-				"HouseRecordLJ":   houseRecordLJ,
-				"BaseAttr":        baseAttr,
-				"TransactionAttr": transactionAttr,
-				"BeOnlineTime":    beOnlineTime,
-				"DetailCrawlTime": time.Now()})
+			var areaStr = ""
+			for i := range areaName {
+				areaStr += areaName[i] + "|"
+			}
+
+			_ = mysql.DefaultTwoSecondHoseDao.Update(house.Id, 1, mysql.HouseInfo{
+				DetailStatus:    1,
+				RoomInfo:        roomInfo,
+				FloorInfo:       floorInfo,
+				DirectionInfo:   directionInfo,
+				DecorateInfo:    decorateInfo,
+				Size:            size,
+				CompletedInfo:   completedInfo,
+				VillageName:     villageName,
+				AreaName:        areaStr,
+				HouseRecordLJ:   houseRecordLJ,
+				BaseAttr:        baseAttr,
+				TransactionAttr: transactionAttr,
+				BeOnlineTime:    beOnlineTime.Format("2006-01-02 15:04:05"),
+				DetailCrawlTime: time.Now().Format("2006-01-02 15:04:05"),
+			})
 		}
 		startNum++
 	}
 }
 
 func crawlerDetail() {
-	var routineCount int = 0
-
-	client := db.GetClient()
-	ctx := db.GetCtx()
-
-	odb := client.Database(configs.ConfigInfo.DbDatabase)
-	dbCollection := odb.Collection(configs.ConfigInfo.TwoHandHouseCollection)
+	var routineCount = 0
 
 	//读取出全部需要抓取详情的数据
-	cur, err := dbCollection.Find(ctx, bson.M{"DetailStatus": 0})
+	var houseArr, err = mysql.DefaultTwoSecondHoseDao.GetAll(0)
 	if err != nil {
-		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
-		return
-	}
-	var houseArr = make([]HouseInfo, 0)
-	err = cur.All(ctx, &houseArr)
-	if err != nil {
-		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
+		logger.Sugar.Fatalf("数据库读取失败:%s", err.Error())
 		return
 	}
 	crawlerDetailCount = len(houseArr)
-	defer cur.Close(ctx)
 
 	routineCount = configs.ConfigInfo.CrawlDetailRoutineNum
 	logger.Sugar.Infof("[2/2] 开始抓取二手房详情,总数=%d,并行抓取协程数=%d", crawlerDetailCount, routineCount)
@@ -457,7 +449,7 @@ func crawlerDetail() {
 	var wg sync.WaitGroup
 	for j := 0; j < int(routineCount); j++ {
 		perCount := crawlerDetailCount / routineCount
-		var tempHouseArr []HouseInfo
+		var tempHouseArr []mysql.HouseInfo
 		var startCount = j * perCount
 		var endCount int
 		if (j + 1) == int(routineCount) {
@@ -469,7 +461,7 @@ func crawlerDetail() {
 		}
 
 		wg.Add(1)
-		go func(startNum int, routineIndex int, houseArr []HouseInfo) {
+		go func(startNum int, routineIndex int, houseArr []mysql.HouseInfo) {
 			defer wg.Add(-1)
 			// 1协程抓取一组数据
 			crawlerOneDetail(startNum, routineIndex, tempHouseArr, crawlerDetailCount)
@@ -483,16 +475,30 @@ func crawlerDetail() {
 // 开始抓取链家二手房（先抓取概要列表、完成后再批量抓取二手房详情）
 // @param crawlerList:是否抓取列表
 func StartLJSecondHandHouse(crawlerList bool) {
-	if err := pingMongoDb(); err != nil {
-		logger.Sugar.Errorf("mongoDb connected error:%s", err.Error())
+	dbConfig := make([]mysql.DatabaseConfig, 1)
+	dbConfig[0] = mysql.DatabaseConfig{
+		ServerName: "Master",
+		Host:       configs.ConfigInfo.MysqlHost,
+		Port:       configs.ConfigInfo.MysqlPort,
+		DbName:     configs.ConfigInfo.MysqlDbName,
+		Username:   configs.ConfigInfo.MysqlUserName,
+		Password:   configs.ConfigInfo.MysqlPassword,
+		MaxConnCnt: configs.ConfigInfo.MysqlMaxConnCnt,
+	}
+	err := mysql.DefaultManager.Init(dbConfig)
+	if err != nil {
+		logger.Sugar.Errorf("初始化mysql连接失败(%s)，结束抓取...", err.Error())
 		return
 	}
+
+	// 创建表
+	mysql.DefaultTwoSecondHoseDao.Init()
 
 	if crawlerList {
 		listFlag := make(chan int)
 		go func() {
 			logger.Sugar.Info("[1/2] 开始抓取城市二手房概要信息")
-			listCrawler()
+			//listCrawler()
 			listFlag <- 1 //列表抓取完成
 		}()
 
@@ -510,21 +516,3 @@ func StartLJSecondHandHouse(crawlerList bool) {
 		logger.Sugar.Infof("[2/2] 抓取详情完成，成功数=%d,总数=%d，结束二手房抓取!", crawlerDetailSuccessCount, crawlerDetailCount)
 	}
 }
-
-func pingMongoDb() error {
-	logger.Sugar.Info("ping mongoDb,timeout 10s ...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/" + configs.ConfigInfo.DbDatabase))
-	defer client.Disconnect(ctx)
-	if err := client.Connect(ctx); err != nil {
-		return err
-	}
-
-	logger.Sugar.Info("ping mongoDb success")
-	return nil
-}
-
-*/
