@@ -88,7 +88,7 @@ func decimal(value float64) float64 {
 	return value
 }
 
-func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
+func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount int) {
 	c := colly.NewCollector()
 
 	if configs.ConfigInfo.CrawlDelay > 0 {
@@ -130,12 +130,6 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 	var nextPageUrl string
 	var areaName string
 	var areaCount = len(areaArr)
-
-	arr := strings.Split(cityUrl, ".")
-	cityName := "unknown_city"
-	if len(arr) > 1 {
-		cityName = arr[0][8:]
-	}
 
 	// 挨个爬各个地区的房源
 	for areaIndex := range areaArr {
@@ -185,7 +179,8 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 				logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
 					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
 
-				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "ListCrawlTime": time.Now()}, link)
+				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice,
+					"Link": link, "ListCrawlTime": time.Now(), "City": cityName}, link)
 			})
 
 			// 下一页
@@ -230,9 +225,11 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 func listCrawler() {
 	count := len(configs.ConfigInfo.CityList)
 	for i := 0; i < count; i++ {
-		cityName := configs.ConfigInfo.CityList[i]
-		logger.Sugar.Infof("[1/2][%d/%d] 抓取城市：%s", i+1, count, cityName)
-		crawlerOneCity(cityName, i, count)
+		url := configs.ConfigInfo.CityList[i]
+		name := strings.Split(url[8:], ".")[0] // https://cs.lianjia... -> cs
+
+		logger.Sugar.Infof("[1/2][%d/%d] 抓取城市：%s,url=%s", i+1, count, name, url)
+		crawlerOneCity(name, url, i, count)
 	}
 }
 
