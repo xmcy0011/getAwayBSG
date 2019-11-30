@@ -372,8 +372,10 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 			} else {
 				var liText = ""
 				element.ForEach("span", func(i int, element *colly.HTMLElement) {
-					if i == 0 {
-						liText = element.Text + ":"
+					if liText == "抵押信息:" {
+						bettyString := strings.TrimSpace(element.Text)
+						bettyString = strings.ReplaceAll(bettyString, "\\n", "")
+						liText += bettyString
 					} else {
 						liText += element.Text
 					}
@@ -389,6 +391,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	})
 
 	for i := range houseArr {
+		baseAttr = ""
+		transactionAttr = ""
 		url := houseArr[i].Link
 		err := c.Visit(url)
 		if err != nil {
