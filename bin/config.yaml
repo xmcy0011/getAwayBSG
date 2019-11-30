@@ -1,22 +1,25 @@
 #MongoDB 连接URL
-dburl: mongodb://127.0.0.1:27017
+dbUrl: mongodb://127.0.0.1:27017
 
 # MongoDB 数据库名
-dbDatabase: pachong
+dbDatabase: crawler
 
 # 抓取状态记录，这个库不可改名，如果启用了权限管理需要添加这个库的权限
 collyDatabase: colly
 
 # 租房存储数据集合
-zufangCollection: lianjia_zufang
+rentCollection: lianjia_zufang
 
-# 抓取间隔时间 单位秒
-crawlDelay: 1
+# 抓取间隔时间上限 单位毫秒(随机)
+crawlDelay: 1000
+
+# 抓取二手房详情写协程数（整数为好，1-16，建议2/4/8）
+crawlDetailRoutineNum: 8
 
 # MongoDB 集合名
 # 存链家的数据
 # 自己添加Link 字段的唯一键，不然有重复
-dbCollection: lianjia
+twoHandHouseCollection: lianjia
 
 # 存智联的数据
 # 自己添加positionURL 字段的唯一键，不然有重复
@@ -27,7 +30,6 @@ zlDBCollection: zhilian
 #proxyList:
 #  - socks5://127.0.0.1:1080
 #  - http://127.0.0.1:8118
-
 
 
 # 智联招聘平台爬取关键词
@@ -49,26 +51,41 @@ zlKeyWords:
 # ！！！请尽量为被爬方考虑，不要抓全站，配置你需要抓取的城市即可！
 # 需要抓取房价城市
 cityList:
-  - https://cd.lianjia.com/ershoufang/               #成都
-#  - https://bj.lianjia.com/ershoufang/               #北京
+  #  - https://bj.lianjia.com/ershoufang/               #北京
+  - https://cs.lianjia.com/ershoufang/               #长沙
+#  - https://sh.lianjia.com/ershoufang/               #上海
+#  - https://hz.lianjia.com/ershoufang/               #杭州
+#  - https://cd.lianjia.com/ershoufang/               #成都
+#  - https://wh.lianjia.com/ershoufang/               #武汉
+#  - https://su.lianjia.com/ershoufang/               #苏州
+#  - https://nb.lianjia.com/ershoufang/               #宁波
+
+#  - https://gz.lianjia.com/ershoufang/               #广州
+#  - https://sz.lianjia.com/ershoufang/               #深圳
+#  - https://cq.lianjia.com/ershoufang/               #重庆
+#  - https://zz.lianjia.com/ershoufang/               #郑州
+#  - https://nj.lianjia.com/ershoufang/               #南京
+#  - https://xa.lianjia.com/ershoufang/               #西安
+#  - https://tj.lianjia.com/ershoufang/               #天津
+#  - https://sy.lianjia.com/ershoufang/               #沈阳
+#  - https://qd.lianjia.com/ershoufang/               #青岛
+#  - https://dg.lianjia.com/ershoufang/               #东莞
+#  - https://km.lianjia.com/ershoufang/               #昆明
+
 #  - https://aq.lianjia.com/ershoufang/               #安庆
 #  - https://cz.fang.lianjia.com/ershoufang/               #滁州
 #  - https://hf.lianjia.com/ershoufang/               #合肥
 #  - https://mas.lianjia.com/ershoufang/               #马鞍山
 #  - https://wuhu.lianjia.com/ershoufang/               #芜湖
-#  - https://cq.lianjia.com/ershoufang/               #重庆
 #  - https://fz.lianjia.com/ershoufang/               #福州
 #  - https://ly.fang.lianjia.com/ershoufang/               #龙岩
 #  - https://quanzhou.lianjia.com/ershoufang/               #泉州
 #  - https://xm.lianjia.com/ershoufang/               #厦门
 #  - https://zhangzhou.lianjia.com/ershoufang/               #漳州
-#  - https://dg.lianjia.com/ershoufang/               #东莞
 #  - https://fs.lianjia.com/ershoufang/               #佛山
-#  - https://gz.lianjia.com/ershoufang/               #广州
 #  - https://hui.lianjia.com/ershoufang/               #惠州
 #  - https://jiangmen.lianjia.com/ershoufang/               #江门
 #  - https://qy.lianjia.com/ershoufang/               #清远
-#  - https://sz.lianjia.com/ershoufang/               #深圳
 #  - https://zh.lianjia.com/ershoufang/               #珠海
 #  - https://zhanjiang.lianjia.com/ershoufang/               #湛江
 #  - https://zs.lianjia.com/ershoufang/               #中山
@@ -80,11 +97,9 @@ cityList:
 #  - https://lz.lianjia.com/ershoufang/               #兰州
 #  - https://huangshi.lianjia.com/ershoufang/               #黄石
 #  - https://hg.fang.lianjia.com/ershoufang/               #黄冈
-#  - https://wh.lianjia.com/ershoufang/               #武汉
 #  - https://xy.lianjia.com/ershoufang/               #襄阳
 #  - https://xn.fang.lianjia.com/ershoufang/               #咸宁
 #  - https://yichang.lianjia.com/ershoufang/               #宜昌
-#  - https://cs.lianjia.com/ershoufang/               #长沙
 #  - https://changde.lianjia.com/ershoufang/               #常德
 #  - https://yy.lianjia.com/ershoufang/               #岳阳
 #  - https://zhuzhou.lianjia.com/ershoufang/               #株洲
@@ -116,14 +131,11 @@ cityList:
 #  - https://luoyang.lianjia.com/ershoufang/               #洛阳
 #  - https://xinxiang.lianjia.com/ershoufang/               #新乡
 #  - https://xc.lianjia.com/ershoufang/               #许昌
-#  - https://zz.lianjia.com/ershoufang/               #郑州
 #  - https://hrb.lianjia.com/ershoufang/               #哈尔滨
 #  - https://changzhou.lianjia.com/ershoufang/               #常州
 #  - https://ha.lianjia.com/ershoufang/               #淮安
 #  - https://ks.lianjia.com/ershoufang/               #昆山
-#  - https://nj.lianjia.com/ershoufang/               #南京
 #  - https://nt.lianjia.com/ershoufang/               #南通
-#  - https://su.lianjia.com/ershoufang/               #苏州
 #  - https://wx.lianjia.com/ershoufang/               #无锡
 #  - https://xz.lianjia.com/ershoufang/               #徐州
 #  - https://yc.lianjia.com/ershoufang/               #盐城
@@ -137,10 +149,8 @@ cityList:
 #  - https://sr.lianjia.com/ershoufang/               #上饶
 #  - https://dl.lianjia.com/ershoufang/               #大连
 #  - https://dd.lianjia.com/ershoufang/               #丹东
-#  - https://sy.lianjia.com/ershoufang/               #沈阳
 #  - https://hhht.lianjia.com/ershoufang/               #呼和浩特
 #  - https://yinchuan.lianjia.com/ershoufang/               #银川
-#  - https://sh.lianjia.com/ershoufang/               #上海
 #  - https://dy.fang.lianjia.com/ershoufang/               #德阳
 #  - https://dazhou.lianjia.com/ershoufang/               #达州
 #  - https://leshan.fang.lianjia.com/ershoufang/               #乐山
@@ -150,26 +160,20 @@ cityList:
 #  - https://nanchong.lianjia.com/ershoufang/               #南充
 #  - https://jn.lianjia.com/ershoufang/               #济南
 #  - https://linyi.lianjia.com/ershoufang/               #临沂
-#  - https://qd.lianjia.com/ershoufang/               #青岛
 #  - https://wf.lianjia.com/ershoufang/               #潍坊
 #  - https://weihai.lianjia.com/ershoufang/               #威海
 #  - https://yt.lianjia.com/ershoufang/               #烟台
 #  - https://zb.lianjia.com/ershoufang/               #淄博
 #  - https://baoji.lianjia.com/ershoufang/               #宝鸡
 #  - https://hanzhong.lianjia.com/ershoufang/               #汉中
-#  - https://xa.lianjia.com/ershoufang/               #西安
 #  - https://xianyang.lianjia.com/ershoufang/               #咸阳
 #  - https://jz.fang.lianjia.com/ershoufang/               #晋中
 #  - https://ty.lianjia.com/ershoufang/               #太原
-#  - https://tj.lianjia.com/ershoufang/               #天津
 #  - https://dali.fang.lianjia.com//ershoufang/               #大理
-#  - https://km.lianjia.com/ershoufang/               #昆明
 #  - https://xsbn.fang.lianjia.com/ershoufang/               #西双版纳
-#  - https://hz.lianjia.com/ershoufang/               #杭州
 #  - https://huzhou.lianjia.com/ershoufang/               #湖州
 #  - https://jx.lianjia.com/ershoufang/               #嘉兴
 #  - https://jh.lianjia.com/ershoufang/               #金华
-#  - https://nb.lianjia.com/ershoufang/               #宁波
 #  - https://sx.lianjia.com/ershoufang/               #绍兴
 #  - https://taizhou.lianjia.com/ershoufang/               #台州
 #  - https://wz.lianjia.com/ershoufang/               #温州
@@ -177,7 +181,7 @@ cityList:
 
 
 # 需要抓取租房数据的城市
-zufangCityList:
+rentCityList:
   - link: https://cd.lianjia.com/zufang/
     name: 成都
   - link: https://bj.lianjia.com/zufang/

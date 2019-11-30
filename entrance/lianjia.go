@@ -20,6 +20,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -94,7 +95,7 @@ func decimal(value float64) float64 {
 	return value
 }
 
-func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
+func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount int) {
 	c := colly.NewCollector()
 
 	if configs.ConfigInfo.CrawlDelay > 0 {
@@ -136,12 +137,6 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 	var nextPageUrl string
 	var areaName string
 	var areaCount = len(areaArr)
-
-	arr := strings.Split(cityUrl, ".")
-	cityName := "unknown_city"
-	if len(arr) > 1 {
-		cityName = arr[0][8:]
-	}
 
 	// 挨个爬各个地区的房源
 	for areaIndex := range areaArr {
@@ -191,7 +186,8 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 				logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
 					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
 
-				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice, "Link": link, "ListCrawlTime": time.Now()}, link)
+				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice,
+					"Link": link, "ListCrawlTime": time.Now().Format("2006-01-02 15:04:05"), "City": cityName}, link)
 			})
 
 			// 下一页
@@ -236,9 +232,11 @@ func crawlerOneCity(cityUrl string, cityIndex int, cityCount int) {
 func listCrawler() {
 	count := len(configs.ConfigInfo.CityList)
 	for i := 0; i < count; i++ {
-		cityName := configs.ConfigInfo.CityList[i]
-		logger.Sugar.Infof("[1/2][%d/%d] 抓取城市：%s", i+1, count, cityName)
-		crawlerOneCity(cityName, i, count)
+		url := configs.ConfigInfo.CityList[i]
+		name := strings.Split(url[8:], ".")[0] // https://cs.lianjia... -> cs
+
+		logger.Sugar.Infof("[1/2][%d/%d] 抓取城市：%s,url=%s", i+1, count, name, url)
+		crawlerOneCity(name, url, i, count)
 	}
 }
 
@@ -294,8 +292,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 
 	var title string // 标题
 
-	var baseAttr string        // 基本属性
-	var transactionAttr string // 交易属性
+	var baseAttr []string        // 基本属性
+	var transactionAttr []string // 交易属性
 
 	var beOnlineTime time.Time // 挂牌时间
 
@@ -360,7 +358,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 				label = element.Text
 			})
 			index := strings.Index(element.Text, label)
-			baseAttr += label + ":" + element.Text[(index+len(label)):] + "|"
+			baseAttr = append(baseAttr, label+":"+element.Text[(index+len(label)):])
 		})
 	})
 
@@ -381,10 +379,16 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 					if i == 0 {
 						liText = element.Text + ":"
 					} else {
-						liText += element.Text
+						if liText == "抵押信息:" {
+							bettyString := strings.TrimSpace(element.Text)
+							bettyString = strings.ReplaceAll(bettyString, "\\n", "")
+							liText += bettyString
+						} else {
+							liText += element.Text
+						}
 					}
 				})
-				transactionAttr += liText + "|"
+				transactionAttr = append(transactionAttr, liText)
 			}
 		})
 	})
@@ -395,6 +399,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	})
 
 	for i := range houseArr {
+		baseAttr = make([]string, 0)
+		transactionAttr = make([]string, 0)
 		url := houseArr[i].Link
 		err := c.Visit(url)
 		if err != nil {
@@ -420,8 +426,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 				"HouseRecordLJ":   houseRecordLJ,
 				"BaseAttr":        baseAttr,
 				"TransactionAttr": transactionAttr,
-				"BeOnlineTime":    beOnlineTime,
-				"DetailCrawlTime": time.Now()})
+				"BeOnlineTime":    beOnlineTime.Format("2006-01-02 15:04:05"),
+				"DetailCrawlTime": time.Now().Format("2006-01-02 15:04:05")})
 		}
 		startNum++
 	}
@@ -520,6 +526,9 @@ func pingMongoDb() error {
 	client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/" + configs.ConfigInfo.DbDatabase))
 	defer client.Disconnect(ctx)
 	if err := client.Connect(ctx); err != nil {
+		return err
+	}
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
 		return err
 	}
 
