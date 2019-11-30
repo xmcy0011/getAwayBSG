@@ -517,6 +517,9 @@ func pingMongoDb() error {
 	if err := client.Connect(ctx); err != nil {
 		return err
 	}
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+		return err
+	}
 
 	logger.Sugar.Info("ping mongoDb success")
 	return nil
