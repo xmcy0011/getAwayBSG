@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -180,7 +181,7 @@ func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount in
 					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
 
 				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice,
-					"Link": link, "ListCrawlTime": time.Now(), "City": cityName}, link)
+					"Link": link, "ListCrawlTime": time.Now().Format("2006-01-02 15:04:05"), "City": cityName}, link)
 			})
 
 			// 下一页
@@ -419,8 +420,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 				"HouseRecordLJ":   houseRecordLJ,
 				"BaseAttr":        baseAttr,
 				"TransactionAttr": transactionAttr,
-				"BeOnlineTime":    beOnlineTime,
-				"DetailCrawlTime": time.Now()})
+				"BeOnlineTime":    beOnlineTime.Format("2006-01-02 15:04:05"),
+				"DetailCrawlTime": time.Now().Format("2006-01-02 15:04:05")})
 		}
 		startNum++
 	}
