@@ -3,8 +3,9 @@
 mysqlHost: "127.0.0.1"
 mysqlPort: 3306
 mysqlDbName: "go_crawler"
-mysqlUserName: "crawler"
-mysqlPassword: "12345"
+#mysqlUserName: "crawler"
+mysqlUserName: "root"
+mysqlPassword: "123456"
 mysqlMaxConnCnt: 4
 
 #MongoDB 连接URL
