@@ -286,8 +286,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 
 	var title string // 标题
 
-	var baseAttr string        // 基本属性
-	var transactionAttr string // 交易属性
+	var baseAttr []string        // 基本属性
+	var transactionAttr []string // 交易属性
 
 	var beOnlineTime time.Time // 挂牌时间
 
@@ -352,7 +352,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 				label = element.Text
 			})
 			index := strings.Index(element.Text, label)
-			baseAttr += label + ":" + element.Text[(index+len(label)):] + "|"
+			baseAttr = append(baseAttr, label+":"+element.Text[(index+len(label)):])
 		})
 	})
 
@@ -382,7 +382,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 						}
 					}
 				})
-				transactionAttr += liText + "|"
+				transactionAttr = append(transactionAttr, liText)
 			}
 		})
 	})
@@ -393,8 +393,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	})
 
 	for i := range houseArr {
-		baseAttr = ""
-		transactionAttr = ""
+		baseAttr = make([]string, 0)
+		transactionAttr = make([]string, 0)
 		url := houseArr[i].Link
 		err := c.Visit(url)
 		if err != nil {
