@@ -1,11 +1,5 @@
 package entrance
 
-
-// del 2019-11-27
-// mongodb比较占用内存，1GB云服务器经常mongodb出现崩溃，故建议使用mysql
-// 代码经过测试可用，只需解开注释即可
-
-/*
 import (
 	"context"
 	"encoding/json"
@@ -535,5 +529,3 @@ func pingMongoDb() error {
 	logger.Sugar.Info("ping mongoDb success")
 	return nil
 }
-
-*/
