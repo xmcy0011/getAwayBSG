@@ -203,6 +203,10 @@ $group:  # 聚合分组统计
 2. 菜鸟教程 https://www.runoob.com/mongodb/mongodb-aggregate.html
 3. 《MongoDB 权威指南第 2 版》.pdf，详细了解每个参数含义
 
+*******
+**PS：下面的语句，直接copy进入./mongo 里面使用**
+*******
+
 ### 最受欢迎户型
 
 ```mongodb
