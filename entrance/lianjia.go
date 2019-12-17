@@ -176,12 +176,77 @@ func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount in
 					iUnitPrice = 0
 				}
 
+				// 位置
+				// 中城丽景香山-武广新城
+				var listVillageName = ""
+				var listAreaName = ""
+
+				positionInfo := e.ChildText(".positionInfo")
+				positionInfo = strings.Replace(positionInfo, " ", "", -1)
+				if temp := strings.Split(positionInfo, "-"); len(temp) >= 2 {
+					listAreaName = temp[0]
+					listVillageName = temp[1]
+				}
+
+				// 房屋信息 户型、大小、朝向、装修、楼层、年代（可为空）、板楼
+				// 3室2厅|133.55平米|南|精装|中楼层(共33层)|2012年建|板塔结合
+				var listHouseType = ""
+				var listHouseSize = 0.0
+				var listHouseOrientations = ""
+				var listHouseDecorate = ""
+				var listHouseFloor = ""
+				var listHouseBorn = ""
+				var listHouseWhat = ""
+
+				houseInfo := e.ChildText(".houseInfo")
+				houseInfo = strings.Replace(houseInfo, " ", "", -1)
+				temp := strings.Split(houseInfo, "|")
+				if len(temp) >= 6 {
+					listHouseType = temp[0]
+					tempSize := temp[1]
+					listHouseOrientations = temp[2]
+					listHouseDecorate = temp[3]
+					listHouseFloor = temp[4]
+
+					tempSize = strings.Replace(tempSize, "平米", "", 1)
+					listHouseSize, err = strconv.ParseFloat(tempSize, 10)
+					if err != nil {
+						listHouseSize = 0
+					}
+
+					if len(temp) >= 7 {
+						listHouseBorn = temp[5]
+						listHouseWhat = temp[6]
+					} else {
+						listHouseWhat = temp[5]
+					}
+				}
+
+				// 关注信息 关注人数、发布时间
+				// 9人关注/2个月以前发布
+				followInfo := e.ChildText(".followInfo")
+				followInfo = strings.Replace(followInfo, " ", "", -1)
+				// tag
+				tag := make([]string, 0)
+				e.ForEach(".tag", func(i int, element *colly.HTMLElement) {
+					element.ForEach("span", func(i int, element *colly.HTMLElement) {
+						tag = append(tag, element.Text)
+					})
+				})
+
+				logger.Sugar.Infof("%s,%s,%s,%s", positionInfo, houseInfo, followInfo, tag)
+
 				progressInfo := getListProgress(cityIndex, cityCount, areaIndex, areaCount, page.CurPage, page.TotalPage)
 				logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
 					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
 
-				db.Add(bson.M{"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice,
-					"Link": link, "ListCrawlTime": time.Now().Format("2006-01-02 15:04:05"), "City": cityName}, link)
+				db.Add(bson.M{
+					"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice,
+					"Link": link, "ListCrawlTime": time.Now().Format("2006-01-02 15:04:05"), "City": cityName,
+					"ListVillageName": listVillageName, "ListAreaName": listAreaName, "ListHouseType": listHouseType,
+					"ListHouseSize": listHouseSize, "ListHouseOrientations": listHouseOrientations, "ListHouseDecorate": listHouseDecorate,
+					"ListHouseFloor": listHouseFloor, "ListHouseBorn": listHouseBorn, "ListHouseWhat": listHouseWhat, "Tag": tag,
+				}, link)
 			})
 
 			// 下一页
