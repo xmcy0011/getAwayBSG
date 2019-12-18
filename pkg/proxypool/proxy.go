@@ -4,7 +4,7 @@ package proxypool
 import (
 	"context"
 	"fmt"
-	"github.com/getAwayBSG/configs"
+	"github.com/getAwayBSG/pkg/configs"
 	"github.com/gocolly/colly"
 	"io/ioutil"
 	"math/rand"

@@ -2,8 +2,8 @@ package entrance
 
 import (
 	"context"
-	"github.com/getAwayBSG/configs"
-	"github.com/getAwayBSG/logger"
+	"github.com/getAwayBSG/pkg/configs"
+	"github.com/getAwayBSG/pkg/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
