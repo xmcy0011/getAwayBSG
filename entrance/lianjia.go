@@ -30,6 +30,7 @@ var crawlerDetailSuccessCount = int32(0) // 总爬取详情成功数
 type Page struct {
 	TotalPage int
 	CurPage   int
+	AreaUrl   string
 }
 
 type HouseInfo struct {
@@ -38,10 +39,13 @@ type HouseInfo struct {
 	TotalPrice int32  `json:"total_price"`
 }
 
-func getAeraUrl(cityUrl string, areaListChan chan []string) {
+// 获取一个城市下所有区域的url
+func getAreaUrl(cityUrl string) []string {
 	c := colly.NewCollector()
 	extensions.RandomUserAgent(c)
 	extensions.Referer(c)
+
+	areaArr := make([]string, 0)
 
 	c.OnHTML("body", func(element *colly.HTMLElement) {
 		element.ForEachWithBreak(".position div div", func(i int, element *colly.HTMLElement) bool {
@@ -49,7 +53,6 @@ func getAeraUrl(cityUrl string, areaListChan chan []string) {
 			if err != nil {
 				panic(err)
 			}
-			areaArr := make([]string, 0)
 
 			element.ForEach("a", func(i int, element *colly.HTMLElement) {
 				goUrl := element.Attr("href")
@@ -58,7 +61,6 @@ func getAeraUrl(cityUrl string, areaListChan chan []string) {
 			})
 
 			logger.Sugar.Infof("%s,抓取地区共:%d", cityUrl, len(areaArr))
-			areaListChan <- areaArr
 			return false
 		})
 	})
@@ -67,21 +69,22 @@ func getAeraUrl(cityUrl string, areaListChan chan []string) {
 	if err != nil {
 		logger.Sugar.Fatalf("%s:%s", err.Error(), cityUrl)
 	}
+
+	return areaArr
 }
 
-func getListProgress(cityIndex int, cityCount int, areaIndex int, areaCount int, pageNum int, pageCount int) string {
+func getListProgress(cityIndex int, cityCount int, areaIndexMin int, areaIndexMax, totalArea int,
+	curPage int, totalPage int, totalCount int) string {
 	// [1/2]
 	// [%d/%d]：城市
-	// [%d/%d]：地区
 	// [%d/%d]：分页
-	return fmt.Sprintf("[1/2][%d/%d][%d/%d][%d/%d]",
-		cityIndex+1, cityCount, areaIndex+1, areaCount, pageNum, pageCount)
+	return fmt.Sprintf("[1/2][%d/%d 城][%d-%d/%d 区][%d/%d 页][%d 条]", cityIndex+1, cityCount,
+		areaIndexMin, areaIndexMax, totalArea, curPage, totalPage, totalCount)
 }
-
 func getDetailProgress(curCount int, totalCount int) string {
 	percent := int(crawlerDetailSuccessCount) * 100 / crawlerDetailCount
 	percentStr := strconv.Itoa(percent) + "%"
-	return fmt.Sprintf("[2/2][%s][%d/%d]", percentStr, crawlerDetailSuccessCount, crawlerDetailCount)
+	return fmt.Sprintf("[2/2][%s%s][%d/%d 成功/总数]", percentStr, "%", crawlerDetailSuccessCount, crawlerDetailCount)
 }
 
 func decimal(value float64) float64 {
@@ -89,9 +92,12 @@ func decimal(value float64) float64 {
 	return value
 }
 
-func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount int) {
-	c := colly.NewCollector()
+func crawlerOneArea(areaUrl string, cityName string, progressChan chan *Page) {
+	var areaName string
+	var page = &Page{CurPage: 1, TotalPage: 1, AreaUrl: areaUrl}
+	var nextPageUrl string
 
+	c := colly.NewCollector()
 	if configs.ConfigInfo.CrawlDelay > 0 {
 		// randomDelay:200-delay
 		err := c.Limit(&colly.LimitRule{
@@ -123,169 +129,251 @@ func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount in
 		panic(err)
 	}
 
-	areaListChan := make(chan []string, 1)
-	getAeraUrl(cityUrl, areaListChan)
-	areaArr := <-areaListChan
+	// 绑定
+	c.OnHTML("body", func(element *colly.HTMLElement) {
+		// 一个地区的总数
+		element.ForEach(".total", func(i int, element *colly.HTMLElement) {
+			areaName = element.Text
+		})
+		// 获取总页数
+		element.ForEach(".page-box", func(i int, element *colly.HTMLElement) {
+			var tempPage Page
+			err := json.Unmarshal([]byte(element.ChildAttr(".house-lst-page-box", "page-data")), &tempPage)
+			if err == nil {
+				page.CurPage = tempPage.CurPage
+				page.TotalPage = tempPage.TotalPage
 
-	var page Page
-	var nextPageUrl string
-	var areaName string
-	var areaCount = len(areaArr)
-
-	// 挨个爬各个地区的房源
-	for areaIndex := range areaArr {
-		c.OnHTML("body", func(element *colly.HTMLElement) {
-			// 一个地区的总数
-			element.ForEach(".total", func(i int, element *colly.HTMLElement) {
-				areaName = element.Text
-			})
-			// 获取总页数
-			element.ForEach(".page-box", func(i int, element *colly.HTMLElement) {
-				var tempPage Page
-				err := json.Unmarshal([]byte(element.ChildAttr(".house-lst-page-box", "page-data")), &tempPage)
-				if err == nil {
-					page = tempPage
-
-					progressInfo := getListProgress(cityIndex, cityCount, areaIndex, areaCount, page.CurPage, page.TotalPage)
-					logger.Sugar.Infof("%s[%s] totalCount=%s,totalPage=%d,curPage=%d",
-						progressInfo, cityName, areaName, page.TotalPage, page.CurPage)
-				}
-			})
-
-			// 获取一页的数据
-			curCount := 0
-			element.ForEach(".LOGCLICKDATA", func(i int, e *colly.HTMLElement) {
-				link := e.ChildAttr("a", "href")
-
-				title := e.ChildText("a:first-child")
-				if title == "" {
-					return
-				}
-				curCount++
-
-				price := e.ChildText(".totalPrice")
-				price = strings.Replace(price, "万", "0000", 1)
-				iPrice, err := strconv.Atoi(price)
-				if err != nil {
-					iPrice = 0
-				}
-
-				unitPrice := e.ChildAttr(".unitPrice", "data-price")
-				iUnitPrice, err := strconv.Atoi(unitPrice)
-				if err != nil {
-					iUnitPrice = 0
-				}
-
-				// 位置
-				// 中城丽景香山-武广新城
-				var listVillageName = ""
-				var listAreaName = ""
-
-				positionInfo := e.ChildText(".positionInfo")
-				positionInfo = strings.Replace(positionInfo, " ", "", -1)
-				if temp := strings.Split(positionInfo, "-"); len(temp) >= 2 {
-					listAreaName = temp[0]
-					listVillageName = temp[1]
-				}
-
-				// 房屋信息 户型、大小、朝向、装修、楼层、年代（可为空）、板楼
-				// 3室2厅|133.55平米|南|精装|中楼层(共33层)|2012年建|板塔结合
-				var listHouseType = ""
-				var listHouseSize = 0.0
-				var listHouseOrientations = ""
-				var listHouseDecorate = ""
-				var listHouseFloor = ""
-				var listHouseBorn = ""
-				var listHouseWhat = ""
-
-				houseInfo := e.ChildText(".houseInfo")
-				houseInfo = strings.Replace(houseInfo, " ", "", -1)
-				temp := strings.Split(houseInfo, "|")
-				if len(temp) >= 6 {
-					listHouseType = temp[0]
-					tempSize := temp[1]
-					listHouseOrientations = temp[2]
-					listHouseDecorate = temp[3]
-					listHouseFloor = temp[4]
-
-					tempSize = strings.Replace(tempSize, "平米", "", 1)
-					listHouseSize, err = strconv.ParseFloat(tempSize, 10)
-					if err != nil {
-						listHouseSize = 0
-					}
-
-					if len(temp) >= 7 {
-						listHouseBorn = temp[5]
-						listHouseWhat = temp[6]
-					} else {
-						listHouseWhat = temp[5]
-					}
-				}
-
-				// 关注信息 关注人数、发布时间
-				// 9人关注/2个月以前发布
-				followInfo := e.ChildText(".followInfo")
-				followInfo = strings.Replace(followInfo, " ", "", -1)
-				// tag
-				tag := make([]string, 0)
-				e.ForEach(".tag", func(i int, element *colly.HTMLElement) {
-					element.ForEach("span", func(i int, element *colly.HTMLElement) {
-						tag = append(tag, element.Text)
-					})
-				})
-
-				logger.Sugar.Infof("%s,%s,%s,%s", positionInfo, houseInfo, followInfo, tag)
-
-				progressInfo := getListProgress(cityIndex, cityCount, areaIndex, areaCount, page.CurPage, page.TotalPage)
-				logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
-					progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
-
-				db.Add(bson.M{
-					"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice,
-					"Link": link, "ListCrawlTime": time.Now().Format("2006-01-02 15:04:05"), "City": cityName,
-					"ListVillageName": listVillageName, "ListAreaName": listAreaName, "ListHouseType": listHouseType,
-					"ListHouseSize": listHouseSize, "ListHouseOrientations": listHouseOrientations, "ListHouseDecorate": listHouseDecorate,
-					"ListHouseFloor": listHouseFloor, "ListHouseBorn": listHouseBorn, "ListHouseWhat": listHouseWhat, "Tag": tag,
-				}, link)
-			})
-
-			// 下一页
-			element.ForEach(".page-box .house-lst-page-box", func(i int, element *colly.HTMLElement) {
-				var tempPage Page
-				err := json.Unmarshal([]byte(element.Attr("page-data")), &tempPage)
-				if err == nil {
-					page = tempPage
-					if page.CurPage < page.TotalPage {
-						re, _ := regexp.Compile("pg\\d+/*")
-						url := re.ReplaceAllString(element.Request.URL.String(), "")
-
-						nextPageUrl = url + "pg" + strconv.Itoa(tempPage.CurPage+1)
-					}
-				}
-			})
+				//progressInfo := getListProgress(cityIndex, cityCount, areaIndex, areaCount, page.CurPage, page.TotalPage)
+				//logger.Sugar.Infof("%s[%s] totalCount=%s,totalPage=%d,curPage=%d",
+				//	progressInfo, cityName, areaName, page.TotalPage, page.CurPage)
+			}
 		})
 
-		page.CurPage = 1
-		page.TotalPage = 1
-		err := c.Visit(areaArr[areaIndex])
-		if err != nil {
-			logger.Sugar.Debugf("%s:%s", err.Error(), cityUrl)
-		}
+		// 获取一页的数据
+		curCount := 0
+		element.ForEach(".LOGCLICKDATA", func(i int, e *colly.HTMLElement) {
+			link := e.ChildAttr("a", "href")
 
-		// 一个地区下的所有分页数据
-		for j := page.CurPage; j < page.TotalPage; j++ {
-			err = c.Visit(nextPageUrl)
+			title := e.ChildText("a:first-child")
+			if title == "" {
+				return
+			}
+			curCount++
+
+			price := e.ChildText(".totalPrice")
+			price = strings.Replace(price, "万", "0000", 1)
+			iPrice, err := strconv.Atoi(price)
 			if err != nil {
-				logger.Sugar.Info(err)
-				continue
+				iPrice = 0
 			}
 
+			unitPrice := e.ChildAttr(".unitPrice", "data-price")
+			iUnitPrice, err := strconv.Atoi(unitPrice)
+			if err != nil {
+				iUnitPrice = 0
+			}
+
+			// 位置
+			// 中城丽景香山-武广新城
+			var listVillageName = ""
+			var listAreaName = ""
+
+			positionInfo := e.ChildText(".positionInfo")
+			positionInfo = strings.Replace(positionInfo, " ", "", -1)
+			if temp := strings.Split(positionInfo, "-"); len(temp) >= 2 {
+				listAreaName = temp[0]
+				listVillageName = temp[1]
+			}
+
+			// 房屋信息 户型、大小、朝向、装修、楼层、年代（可为空）、板楼
+			// 3室2厅|133.55平米|南|精装|中楼层(共33层)|2012年建|板塔结合
+			var listHouseType = ""
+			var listHouseSize = 0.0
+			var listHouseOrientations = ""
+			var listHouseDecorate = ""
+			var listHouseFloor = ""
+			var listHouseBorn = ""
+			var listHouseWhat = ""
+
+			houseInfo := e.ChildText(".houseInfo")
+			houseInfo = strings.Replace(houseInfo, " ", "", -1)
+			temp := strings.Split(houseInfo, "|")
+			if len(temp) >= 6 {
+				listHouseType = temp[0]
+				tempSize := temp[1]
+				listHouseOrientations = temp[2]
+				listHouseDecorate = temp[3]
+				listHouseFloor = temp[4]
+
+				tempSize = strings.Replace(tempSize, "平米", "", 1)
+				listHouseSize, err = strconv.ParseFloat(tempSize, 10)
+				if err != nil {
+					listHouseSize = 0
+				}
+
+				if len(temp) >= 7 {
+					listHouseBorn = temp[5]
+					listHouseWhat = temp[6]
+				} else {
+					listHouseWhat = temp[5]
+				}
+			}
+
+			// 关注信息 关注人数、发布时间
+			// 9人关注/2个月以前发布
+			followInfo := e.ChildText(".followInfo")
+			followInfo = strings.Replace(followInfo, " ", "", -1)
+			// tag
+			tag := make([]string, 0)
+			e.ForEach(".tag", func(i int, element *colly.HTMLElement) {
+				element.ForEach("span", func(i int, element *colly.HTMLElement) {
+					tag = append(tag, element.Text)
+				})
+			})
+
+			//progressInfo := getListProgress(cityIndex, cityCount, areaIndex, areaCount, page.CurPage, page.TotalPage)
+			//logger.Sugar.Infof("%s[%d] %s,%s,%s,总价：%d 万元，每平米：%d",
+			//	progressInfo, curCount, cityName, areaName, title, iPrice, iUnitPrice)
+
+			db.Add(bson.M{
+				"DetailStatus": 0, "Title": title, "TotalPrice": iPrice, "UnitPrice": iUnitPrice,
+				"Link": link, "ListCrawlTime": time.Now().Format("2006-01-02 15:04:05"), "City": cityName,
+				"ListVillageName": listVillageName, "ListAreaName": listAreaName, "ListHouseType": listHouseType,
+				"ListHouseSize": listHouseSize, "ListHouseOrientations": listHouseOrientations, "ListHouseDecorate": listHouseDecorate,
+				"ListHouseFloor": listHouseFloor, "ListHouseBorn": listHouseBorn, "ListHouseWhat": listHouseWhat, "Tag": tag,
+			}, link)
+		})
+
+		// 下一页
+		element.ForEach(".page-box .house-lst-page-box", func(i int, element *colly.HTMLElement) {
+			var tempPage Page
+			err := json.Unmarshal([]byte(element.Attr("page-data")), &tempPage)
+			if err == nil {
+				page.CurPage = tempPage.CurPage
+				if page.CurPage < page.TotalPage {
+					re, _ := regexp.Compile("pg\\d+/*")
+					url := re.ReplaceAllString(element.Request.URL.String(), "")
+
+					nextPageUrl = url + "pg" + strconv.Itoa(tempPage.CurPage+1)
+				}
+			}
+		})
+	})
+
+	// 初始化访问
+	err := c.Visit(areaUrl)
+	if err != nil {
+		logger.Sugar.Debugf("%s:%s", err.Error(), areaUrl)
+	}
+	progressChan <- page // 更新进度
+
+	// 一个地区下的所有分页数据
+	for j := page.CurPage; j < page.TotalPage; j++ {
+		err = c.Visit(nextPageUrl)
+		if err == nil {
 			if page.CurPage != (j + 1) {
 				logger.Sugar.Errorf("修正分页数据，page.CurPage=%d,j=%d，忽略继续", page.CurPage, j)
 				j = page.CurPage
 			}
+		} else {
+			logger.Sugar.Error(err)
 		}
+		if page.CurPage > 10 {
+			break
+		}
+		progressChan <- page // 更新进度
 	}
+}
+
+func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount int) {
+	areaArr := getAreaUrl(cityUrl)
+
+	maxRoutine := configs.ConfigInfo.CrawlDetailRoutineNum
+	if maxRoutine > 4 {
+		maxRoutine = 4
+		logger.Sugar.Infof("为防止河蟹，列表抓取已修正为 %d 协程同时抓取", maxRoutine)
+	}
+
+	const pageSize = 30 // 链接，分页30条
+
+	areaIndexMin := 0
+	areaIndexMax := 0
+	areaTotal := len(areaArr)
+	waitGroup := &sync.WaitGroup{}
+	progressChan := make(chan *Page, 0)
+
+	// 计算4个routine同时爬所有地区，要进行几轮
+	loopCount := len(areaArr) / maxRoutine
+	if temp := len(areaArr) % maxRoutine; temp != 0 {
+		loopCount++
+	}
+
+	// print list progress
+	isComplete := false
+	curPage := 0
+	totalPage := 0
+	totalCount := 0
+	go func() {
+		isInit := false
+		initPageAreaMap := make(map[string]*Page, maxRoutine)
+
+		for {
+			// wait chan
+			page := <-progressChan
+			curPage++
+			totalCount += pageSize
+
+			// 统计所有条数，等待所有协程初始化完成后，才打印进度
+			if value, ok := initPageAreaMap[page.AreaUrl]; ok {
+				value.CurPage = page.CurPage
+			} else {
+				initPageAreaMap[page.AreaUrl] = page
+				totalPage += page.TotalPage
+			}
+			if len(initPageAreaMap) >= maxRoutine {
+				isInit = true
+			}
+
+			// 打印进度
+			if isInit {
+				logger.Sugar.Info(getListProgress(cityIndex, cityCount, areaIndexMin, areaIndexMax, areaTotal, curPage, totalPage, totalCount))
+			}
+
+			if isComplete {
+				break
+			}
+		}
+	}()
+
+	// 多线程同时爬取多个地区下所有列表
+	for i := 0; i < loopCount; i++ {
+		curPage = 0
+		totalPage = 0
+		areaIndexMin = (i * maxRoutine) + 1
+		if areaIndexMax = (i + 1) * maxRoutine; areaIndexMax > len(areaArr) {
+			areaIndexMax = len(areaArr)
+		}
+
+		waitGroup.Add(maxRoutine)
+		for routine := 0; routine < maxRoutine; routine++ {
+			areaIndex := routine + i*maxRoutine
+			if areaIndex < len(areaArr) {
+				go func(areaUrl string, cityName string, progressChan chan *Page) {
+					crawlerOneArea(areaUrl, cityName, progressChan)
+					// complete one routine,notify it
+					waitGroup.Done()
+				}(areaArr[areaIndex], cityName, progressChan)
+			} else {
+				waitGroup.Done()
+			}
+		}
+
+		// wait all routine done
+		waitGroup.Wait()
+	}
+
+	isComplete = true
+	time.Sleep(time.Second * 2)
 }
 
 func listCrawler() {
