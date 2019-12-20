@@ -633,6 +633,25 @@ func crawlerDetail() {
 	wg.Wait() // 等待所有协程完成
 }
 
+func pingMongoDb() error {
+	logger.Sugar.Info("ping mongoDb,timeout 10s ...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/" + configs.ConfigInfo.DbDatabase))
+	defer client.Disconnect(ctx)
+	if err := client.Connect(ctx); err != nil {
+		return err
+	}
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+		return err
+	}
+
+	logger.Sugar.Info("ping mongoDb success")
+	return nil
+}
+
 // 开始抓取链家二手房（先抓取概要列表、完成后再批量抓取二手房详情）
 // @param crawlerList:是否抓取列表
 func StartLJSecondHandHouse(crawlerList bool) {
@@ -662,23 +681,4 @@ func StartLJSecondHandHouse(crawlerList bool) {
 	} else {
 		logger.Sugar.Infof("[2/2] 抓取详情完成，成功数=%d,总数=%d，结束二手房抓取!", crawlerDetailSuccessCount, crawlerDetailCount)
 	}
-}
-
-func pingMongoDb() error {
-	logger.Sugar.Info("ping mongoDb,timeout 10s ...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	client, _ := mongo.NewClient(options.Client().ApplyURI(configs.ConfigInfo.DbRrl + "/" + configs.ConfigInfo.DbDatabase))
-	defer client.Disconnect(ctx)
-	if err := client.Connect(ctx); err != nil {
-		return err
-	}
-	if err := client.Ping(ctx, readpref.Primary()); err != nil {
-		return err
-	}
-
-	logger.Sugar.Info("ping mongoDb success")
-	return nil
 }

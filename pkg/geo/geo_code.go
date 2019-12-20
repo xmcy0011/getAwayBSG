@@ -14,6 +14,7 @@ import (
 
 const filePath = "pkg/geo/subway.json"                  // 地铁站点名字
 const outputGeocodeFilePath = "pkg/geo/subway-geo.json" // 地铁经纬输出文件路径
+
 const geoCodeUrl = "https://restapi.amap.com/v3/geocode/geo"
 const geoCodeKey = "e8819cde9b68966210cb6ff2bf4e76d7"
 
@@ -32,8 +33,18 @@ type GeoResult struct {
 	Geocodes []LatLon `json:"geocodes"`
 }
 
-func StartGeoCode() {
-	geoCodeCitySubway("上海", outputGeocodeFilePath)
+// 使用方法
+// python3 subway.py，会爬取所有地铁站点并写入到文件subway.json中
+// 以下代码会读取subway.json中的地铁站，通过高德地理编码API，转换成对应的经纬度，同时输出到文件中
+//
+// logger.InitLogger("log/log.log", "debug")
+// StartGeoCode("上海")
+//
+// 注意：
+// 高德地理编码是代码里面写死的，具体见：geoCodeUrl
+// geoCodeKey需要去高德后台申请，https://lbs.amap.com/dev/key/app，最好替换成自己的（日调用量100万）
+func StartGeoCode(cityName string) {
+	geoCodeCitySubway(cityName, outputGeocodeFilePath)
 }
 
 func loadCitySubway(cityName string) ([]*SubwayInfo, error) {

@@ -72,6 +72,7 @@ func choice() {
 		logger.Sugar.Info("请选择任务")
 		logger.Sugar.Info("1.爬取链家二手房（全量）")
 		logger.Sugar.Info("2.爬取链家二手房（详情）")
+		logger.Sugar.Info("3.链家二手房补充经纬度")
 		//logger.Sugar.Info("3.爬智联")
 		//logger.Sugar.Info("4.链家租房")
 
@@ -86,6 +87,10 @@ func choice() {
 				entrance.CleanVisit()
 				logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
 				entrance.StartLJSecondHandHouse(false)
+				break
+			} else if choice == 3 {
+				entrance.StartGeocodeLJ()
+				logger.Sugar.Infof("链家二手房数据补充经纬度信息,房源tableName=%s", configs.ConfigInfo.DbDatabase)
 				break
 			} else {
 				logger.Sugar.Info("选择错误！")
