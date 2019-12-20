@@ -278,9 +278,6 @@ func crawlerOneArea(areaUrl string, cityName string, progressChan chan *Page) {
 		} else {
 			logger.Sugar.Error(err)
 		}
-		if page.CurPage > 10 {
-			break
-		}
 		progressChan <- page // 更新进度
 	}
 }

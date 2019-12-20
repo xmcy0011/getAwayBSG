@@ -381,6 +381,15 @@ db.lianjia_2.find({
   }).limit(2);
 ```
 
+## 其他
+
+1.mongodb导出excel
+```shell
+mongoexport -d crawler -c lianjia_2_sh -f _id,ListCrawlTime,ListHouseType,ListHouseSize,ListHouseWhat,City,ListHouseFloor,Tag,Title,UnitPrice,Link,ListVillageName,ListAreaName,ListHouseBorn,TotalPrice,ListHouseOrientations,ListHouseDecorate,AreaName,BaseAttr,BeOnlineTime,CompletedInfo,DecorateInfo,DetailCrawlTime,DirectionInfo,FloorInfo,HouseRecordLJ,RoomInfo,Size,TransactionAttr,VillageName,FormattedAddress,Location --csv -o ./lianjia.csv
+```
+
+2.数据分析软件推荐：Tableau
+
 ## Contact
 
 email: xmcy0011@sina.com
