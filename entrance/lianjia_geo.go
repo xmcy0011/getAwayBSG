@@ -279,6 +279,6 @@ func StartGeocodeLJ() {
 	}
 
 	timeDiff := time.Now().Sub(startTime)
-	logger.Sugar.Infof("补充结束,成功：%d，失败：%d，总数：%d，用时：%d:%d:%d", successCount, totalCount-successCount,
-		totalCount, timeDiff.Hours(), timeDiff.Minutes(), timeDiff.Seconds())
+	logger.Sugar.Infof("补充结束,成功：%d，失败：%d，总数：%d，用时：%.2f 秒=%.2f 分=%.2f 时", successCount, totalCount-successCount,
+		totalCount, timeDiff.Seconds(), timeDiff.Minutes(), timeDiff.Hours())
 }

@@ -89,8 +89,8 @@ func choice() {
 				entrance.StartLJSecondHandHouse(false)
 				break
 			} else if choice == 3 {
-				entrance.StartGeocodeLJ()
 				logger.Sugar.Infof("链家二手房数据补充经纬度信息,房源tableName=%s", configs.ConfigInfo.DbDatabase)
+				entrance.StartGeocodeLJ()
 				break
 			} else {
 				logger.Sugar.Info("选择错误！")
