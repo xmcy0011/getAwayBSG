@@ -336,6 +336,51 @@ db.lianjia.aggregate([
 ])
 ```
 
+### 地理空间分析
+
+#### 火车站1公里附近房源
+高德坐标拾取：https://lbs.amap.com/console/show/picker  
+mongodb docs：https://docs.mongodb.com/manual/reference/operator/query/nearSphere/    
+
+1.建空间索引 
+```mongo
+# mongodb 提供的地图索引有两种，分别是 2d 和 2dsphere
+# 2d 索引通过二维平面记录点坐标，支持在平面几何中计算距离，而 2dsphere 则支持在球面上进行距离的计算，并且支持 mongodb 的所有地理空间查询方法
+db.lianjia.ensureIndex({"Location":"2dsphere"})
+```
+
+芙蓉广场(为例)： 
+```go
+[112.984947,28.195951]
+```
+
+MongoDB Compass:
+```mongodb
+{
+  'Location': {
+    $nearSphere: {
+      $geometry: {type: 'Point', coordinates: [112.984947, 28.195951]},
+      $maxDistance: 2000
+    }
+  }
+}
+```
+
+Shell:
+```mongodb
+db.lianjia_2.find({
+    Location: {
+      $nearSphere: {
+        $geometry: {
+          type: "Point",
+          coordinates: [112.984947, 28.195951]
+        },
+        $maxDistance: 2000
+      }
+    }
+  }).limit(2);
+```
+
 ## Contact
 
 email: xmcy0011@sina.com

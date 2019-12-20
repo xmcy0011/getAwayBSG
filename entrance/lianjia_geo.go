@@ -133,7 +133,10 @@ func addVillageLatLon(cityName, villageName string, lat, lon float32, formattedA
 func updateLjVillageLatLon(link string, lon, lat float32, formattedAddress string) {
 	lj := dbLjCollection()
 	if lj != nil {
-		_, err := lj.UpdateOne(context.Background(), bson.M{"Link": link}, bson.M{"$set": bson.M{"Lon": lon, "Lat": lat, "FormattedAddress": formattedAddress}})
+		location := make([]float32, 0)
+		location = append(location, lon)
+		location = append(location, lat)
+		_, err := lj.UpdateOne(context.Background(), bson.M{"Link": link}, bson.M{"$set": bson.M{"Location": location, "FormattedAddress": formattedAddress}})
 		if err != nil {
 			if !strings.Contains(err.Error(), "multiple write errors") {
 				logger.Sugar.Errorf("数据库插入失败:%s", err.Error())
@@ -242,7 +245,7 @@ func StartGeocodeLJ() {
 
 	lj := dbLjCollection()
 	if lj != nil {
-		cursor, err := lj.Find(context.Background(), bson.M{"Lat": bson.M{"$exists": false}})
+		cursor, err := lj.Find(context.Background(), bson.M{"Location": bson.M{"$exists": false}})
 		defer cursor.Close(context.Background())
 
 		if err != nil {
