@@ -27,10 +27,9 @@ import (
 var crawlerDetailCount = 0               // 总爬取详情数
 var crawlerDetailSuccessCount = int32(0) // 总爬取详情成功数
 
-type Page struct {
-	TotalPage int
-	CurPage   int
-	AreaUrl   string
+type PageInfo struct {
+	CurPage   int // 区域所有房源数量
+	TotalPage int // 当前抓取总数
 }
 
 type HouseInfo struct {
@@ -39,13 +38,18 @@ type HouseInfo struct {
 	TotalPrice int32  `json:"total_price"`
 }
 
+type AreaInfo struct {
+	Name string
+	Url  string
+}
+
 // 获取一个城市下所有区域的url
-func getAreaUrl(cityUrl string) []string {
+func getAreaUrl(cityUrl string) []AreaInfo {
 	c := colly.NewCollector()
 	extensions.RandomUserAgent(c)
 	extensions.Referer(c)
 
-	areaArr := make([]string, 0)
+	areaArr := make([]AreaInfo, 0)
 
 	c.OnHTML("body", func(element *colly.HTMLElement) {
 		element.ForEachWithBreak(".position div div", func(i int, element *colly.HTMLElement) bool {
@@ -57,7 +61,12 @@ func getAreaUrl(cityUrl string) []string {
 			element.ForEach("a", func(i int, element *colly.HTMLElement) {
 				goUrl := element.Attr("href")
 				rootUrl := u.Scheme + "://" + u.Host
-				areaArr = append(areaArr, rootUrl+goUrl)
+
+				info := AreaInfo{}
+				info.Name = element.Text
+				info.Url = rootUrl + goUrl
+
+				areaArr = append(areaArr, info)
 			})
 
 			logger.Sugar.Infof("%s,抓取地区共:%d", cityUrl, len(areaArr))
@@ -73,13 +82,11 @@ func getAreaUrl(cityUrl string) []string {
 	return areaArr
 }
 
-func getListProgress(cityIndex int, cityCount int, areaIndexMin int, areaIndexMax, totalArea int,
-	curPage int, totalPage int, totalCount int) string {
+func getListProgress(cityIndex int, cityCount int, curArea, totalArea int, curCount int, totalCount int) string {
 	// [1/2]
 	// [%d/%d]：城市
-	// [%d/%d]：分页
-	return fmt.Sprintf("[1/2][%d/%d 城][%d-%d/%d 区][%d/%d 页][%d 条]", cityIndex+1, cityCount,
-		areaIndexMin, areaIndexMax, totalArea, curPage, totalPage, totalCount)
+	// [%d/%d]：区域 - 子区域的不打印
+	return fmt.Sprintf("[1/2][%d/%d 城][%d/%d 区][%d/%d 条]", cityIndex+1, cityCount, curArea, totalArea, curCount, totalCount)
 }
 func getDetailProgress(curCount int, totalCount int) string {
 	percent := int(crawlerDetailSuccessCount) * 100 / crawlerDetailCount
@@ -92,10 +99,63 @@ func decimal(value float64) float64 {
 	return value
 }
 
-func crawlerOneArea(areaUrl string, cityName string, progressChan chan *Page) {
-	var areaName string
-	var page = &Page{CurPage: 1, TotalPage: 1, AreaUrl: areaUrl}
+// 获取市 -> 区域 下的更小一级的区域，解决链接超过100页后的数据无法抓取的问题
+func getSecondAreas(areaUrl string) ([]AreaInfo, int, error) {
+	c := colly.NewCollector()
+	extensions.RandomUserAgent(c)
+	extensions.Referer(c)
+
+	arr := make([]AreaInfo, 0)
+	totalAreaCount := 0 // 某个区域下的总房源套数
+
+	// 绑定
+	c.OnHTML("body", func(element *colly.HTMLElement) {
+		// 一个地区的总数
+		element.ForEach(".position", func(i int, element *colly.HTMLElement) {
+			element.ForEach("div", func(i int, element *colly.HTMLElement) {
+				text := element.Attr("data-role")
+				if text == "ershoufang" {
+					element.ForEach("div", func(i int, element *colly.HTMLElement) {
+						if i == 1 {
+							element.ForEach("a", func(i int, element *colly.HTMLElement) {
+								//logger.Sugar.Infof("name:%s,url:https://%s%s", element.Text, element.Request.URL.Host, element.Attr("href"))
+								info := AreaInfo{}
+								info.Name = element.Text
+								info.Url = "https://" + element.Request.URL.Host + element.Attr("href")
+								arr = append(arr, info)
+							})
+						}
+					})
+				}
+			})
+		})
+
+		// 该区域下房源总套数
+		element.ForEach(".total", func(i int, element *colly.HTMLElement) {
+			temp := element.ChildText("span")
+			count, err := strconv.Atoi(temp)
+			if err != nil {
+				logger.Sugar.Error(err)
+			} else {
+				totalAreaCount = count
+			}
+		})
+	})
+
+	err := c.Visit(areaUrl)
+	if err != nil {
+		logger.Sugar.Error(err)
+		return nil, totalAreaCount, err
+	}
+	return arr, totalAreaCount, nil
+}
+
+// 市 -> 区域 -> 二级区域
+func crawlerOneAreaChild(areaName string, childAreaInfo AreaInfo, cityName string, progressChan chan int) {
 	var nextPageUrl string
+	var count = 0
+	var curPage = 0
+	var totalPage = 0
 
 	c := colly.NewCollector()
 	if configs.ConfigInfo.CrawlDelay > 0 {
@@ -132,16 +192,16 @@ func crawlerOneArea(areaUrl string, cityName string, progressChan chan *Page) {
 	// 绑定
 	c.OnHTML("body", func(element *colly.HTMLElement) {
 		// 一个地区的总数
-		element.ForEach(".total", func(i int, element *colly.HTMLElement) {
-			areaName = element.Text
-		})
+		//element.ForEach(".total", func(i int, element *colly.HTMLElement) {
+		//	areaName = element.Text
+		//})
 		// 获取总页数
 		element.ForEach(".page-box", func(i int, element *colly.HTMLElement) {
-			var tempPage Page
+			var tempPage PageInfo
 			err := json.Unmarshal([]byte(element.ChildAttr(".house-lst-page-box", "page-data")), &tempPage)
 			if err == nil {
-				page.CurPage = tempPage.CurPage
-				page.TotalPage = tempPage.TotalPage
+				curPage = tempPage.CurPage
+				totalPage = tempPage.TotalPage
 
 				//progressInfo := getListProgress(cityIndex, cityCount, areaIndex, areaCount, page.CurPage, page.TotalPage)
 				//logger.Sugar.Infof("%s[%s] totalCount=%s,totalPage=%d,curPage=%d",
@@ -150,7 +210,6 @@ func crawlerOneArea(areaUrl string, cityName string, progressChan chan *Page) {
 		})
 
 		// 获取一页的数据
-		curCount := 0
 		element.ForEach(".LOGCLICKDATA", func(i int, e *colly.HTMLElement) {
 			link := e.ChildAttr("a", "href")
 
@@ -158,7 +217,7 @@ func crawlerOneArea(areaUrl string, cityName string, progressChan chan *Page) {
 			if title == "" {
 				return
 			}
-			curCount++
+			count++
 
 			price := e.ChildText(".totalPrice")
 			price = strings.Replace(price, "万", "0000", 1)
@@ -246,11 +305,11 @@ func crawlerOneArea(areaUrl string, cityName string, progressChan chan *Page) {
 
 		// 下一页
 		element.ForEach(".page-box .house-lst-page-box", func(i int, element *colly.HTMLElement) {
-			var tempPage Page
+			var tempPage PageInfo
 			err := json.Unmarshal([]byte(element.Attr("page-data")), &tempPage)
 			if err == nil {
-				page.CurPage = tempPage.CurPage
-				if page.CurPage < page.TotalPage {
+				curPage = tempPage.CurPage
+				if curPage < totalPage {
 					re, _ := regexp.Compile("pg\\d+/*")
 					url := re.ReplaceAllString(element.Request.URL.String(), "")
 
@@ -261,80 +320,64 @@ func crawlerOneArea(areaUrl string, cityName string, progressChan chan *Page) {
 	})
 
 	// 初始化访问
-	err := c.Visit(areaUrl)
+	err := c.Visit(childAreaInfo.Url)
 	if err != nil {
-		logger.Sugar.Debugf("%s:%s", err.Error(), areaUrl)
+		logger.Sugar.Debugf("区域:%s,子区域:%s(%s):%s", areaName, childAreaInfo.Name, childAreaInfo.Url, err.Error())
+	} else {
+		logger.Sugar.Infof("城市:%s,区域:%s,子区域:%s,总共分页数:%d", cityName, areaName, childAreaInfo.Name, totalPage)
 	}
-	progressChan <- page // 更新进度
 
 	// 一个地区下的所有分页数据
-	for j := page.CurPage; j < page.TotalPage; j++ {
+	for j := curPage; j < totalPage; j++ {
+		count = 0
 		err = c.Visit(nextPageUrl)
 		if err == nil {
-			if page.CurPage != (j + 1) {
-				logger.Sugar.Errorf("修正分页数据，page.CurPage=%d,j=%d，忽略继续", page.CurPage, j)
-				j = page.CurPage
+			if curPage != (j + 1) {
+				logger.Sugar.Errorf("修正分页数据，page.CurPage=%d,j=%d，忽略继续", curPage, j)
+				j = curPage
 			}
 		} else {
 			logger.Sugar.Error(err)
 		}
-		progressChan <- page // 更新进度
+		progressChan <- count // 更新进度
 	}
 }
 
-func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount int) {
-	areaArr := getAreaUrl(cityUrl)
+// 列表抓取二级区域所有分页
+func listCrawlerOneArea(cityIndex, cityCount int, areaIndex, totalArea int, areaInfo AreaInfo, cityName string) {
+	var waitGroup = &sync.WaitGroup{}
+	//const pageSize = 30 // 链接，分页30条
 
+	childAreas, totalCount, err := getSecondAreas(areaInfo.Url)
+	if err != nil {
+		logger.Sugar.Error(err)
+		return
+	}
+	logger.Sugar.Infof("城市=%s,区域=%s,开始抓取该区域下所有子区域房源,count=%d", cityName, areaInfo.Name, len(childAreas))
+
+	// 计算4个routine同时爬所有地区，要进行几轮
 	maxRoutine := configs.ConfigInfo.CrawlDetailRoutineNum
 	if maxRoutine > 4 {
 		maxRoutine = 4
 		logger.Sugar.Infof("为防止河蟹，列表抓取已修正为 %d 协程同时抓取", maxRoutine)
 	}
-
-	const pageSize = 30 // 链接，分页30条
-
-	areaIndexMin := 0
-	areaIndexMax := 0
-	areaTotal := len(areaArr)
-	waitGroup := &sync.WaitGroup{}
-	progressChan := make(chan *Page, 0)
-
-	// 计算4个routine同时爬所有地区，要进行几轮
-	loopCount := len(areaArr) / maxRoutine
-	if temp := len(areaArr) % maxRoutine; temp != 0 {
+	loopCount := totalCount / maxRoutine
+	if temp := totalCount % maxRoutine; temp != 0 {
 		loopCount++
 	}
+	progressChan := make(chan int, 0)
 
 	// print list progress
 	isComplete := false
 	curPage := 0
-	totalPage := 0
-	totalCount := 0
 	go func() {
-		isInit := false
-		initPageAreaMap := make(map[string]*Page, maxRoutine)
-
+		curCount := 0
 		for {
 			// wait chan
-			page := <-progressChan
-			curPage++
-			totalCount += pageSize
-
-			// 统计所有条数，等待所有协程初始化完成后，才打印进度
-			if value, ok := initPageAreaMap[page.AreaUrl]; ok {
-				value.CurPage = page.CurPage
-			} else {
-				initPageAreaMap[page.AreaUrl] = page
-				totalPage += page.TotalPage
-			}
-			if len(initPageAreaMap) >= maxRoutine {
-				isInit = true
-			}
-
+			count := <-progressChan
+			curCount += count
 			// 打印进度
-			if isInit {
-				logger.Sugar.Info(getListProgress(cityIndex, cityCount, areaIndexMin, areaIndexMax, areaTotal, curPage, totalPage, totalCount))
-			}
+			logger.Sugar.Info(getListProgress(cityIndex, cityCount, areaIndex+1, totalArea, curCount, totalCount))
 
 			if isComplete {
 				break
@@ -342,24 +385,19 @@ func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount in
 		}
 	}()
 
-	// 多线程同时爬取多个地区下所有列表
+	// 多线程同时爬取多个地区下所有子区域
 	for i := 0; i < loopCount; i++ {
-		curPage = 0
-		totalPage = 0
-		areaIndexMin = (i * maxRoutine) + 1
-		if areaIndexMax = (i + 1) * maxRoutine; areaIndexMax > len(areaArr) {
-			areaIndexMax = len(areaArr)
-		}
-
 		waitGroup.Add(maxRoutine)
 		for routine := 0; routine < maxRoutine; routine++ {
 			areaIndex := routine + i*maxRoutine
-			if areaIndex < len(areaArr) {
-				go func(areaUrl string, cityName string, progressChan chan *Page) {
-					crawlerOneArea(areaUrl, cityName, progressChan)
+			if areaIndex < len(childAreas) {
+				curPage++
+
+				go func(areaName string, childAreaInfo AreaInfo, cityName string, progressChan chan int) {
+					crawlerOneAreaChild(areaName, childAreaInfo, cityName, progressChan)
 					// complete one routine,notify it
 					waitGroup.Done()
-				}(areaArr[areaIndex], cityName, progressChan)
+				}(areaInfo.Name, childAreas[areaIndex], cityName, progressChan)
 			} else {
 				waitGroup.Done()
 			}
@@ -370,6 +408,14 @@ func crawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount in
 	}
 
 	isComplete = true
+}
+
+// 列表抓取一个城市
+func listCrawlerOneCity(cityName string, cityUrl string, cityIndex int, cityCount int) {
+	areaArr := getAreaUrl(cityUrl)
+	for i := range areaArr {
+		listCrawlerOneArea(cityIndex, cityCount, i, len(areaArr), areaArr[i], cityName)
+	}
 	time.Sleep(time.Second * 2)
 }
 
@@ -380,7 +426,7 @@ func listCrawler() {
 		name := strings.Split(url[8:], ".")[0] // https://cs.lianjia... -> cs
 
 		logger.Sugar.Infof("[1/2][%d/%d] 抓取城市：%s,url=%s", i+1, count, name, url)
-		crawlerOneCity(name, url, i, count)
+		listCrawlerOneCity(name, url, i, count)
 	}
 }
 
@@ -502,7 +548,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 				label = element.Text
 			})
 			index := strings.Index(element.Text, label)
-			baseAttr = append(baseAttr, label+":"+element.Text[(index+len(label)):])
+			baseAttr = append(baseAttr, label+":"+element.Text[(index + len(label)):])
 		})
 	})
 
