@@ -277,7 +277,7 @@ func StartGeocodeLJ() {
 				logger.Sugar.Infof("[%d/%d]城市：%s,小区：%s,标题：%s,经纬度:%f,%f", i, totalCount, item.City, item.ListAreaName, item.Title, lon, lat)
 			}
 
-			time.Sleep(10 * time.Millisecond)
+			//time.Sleep(10 * time.Millisecond)
 		}
 	}
 
