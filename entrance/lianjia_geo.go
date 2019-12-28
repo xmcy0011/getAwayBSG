@@ -290,6 +290,8 @@ func waitElegantExit(signalChan chan os.Signal) {
 		logger.Sugar.Infof("主动退出，成功：%d，失败：%d，总数：%d，用时：%.2f 秒=%.2f 分=%.2f 时", successCount, totalCount-successCount,
 			totalCount, timeDiff.Seconds(), timeDiff.Minutes(), timeDiff.Hours())
 		logger.Sugar.Info("如果需要继续补充，请再次执行程序，选择3即可！")
+
+		os.Exit(2)
 	}()
 }
 
