@@ -20,6 +20,8 @@ import (
 
 var client *mongo.Client
 var cityNames map[string]string
+// key:villageName:cityName
+var cacheGeoTables map[string]LatLon
 
 const geoCodeUrl = "https://restapi.amap.com/v3/geocode/geo"
 const geoCodeKey = "e8819cde9b68966210cb6ff2bf4e76d7"
@@ -30,6 +32,7 @@ type LatLon struct {
 }
 type GeoResult struct {
 	Status   string   `json:"status"`
+	Count    string   `json:"count"`
 	GeoCodes []LatLon `json:"geocodes"`
 }
 type GeoHouseInfo struct {
@@ -40,6 +43,7 @@ type GeoHouseInfo struct {
 }
 
 func init() {
+	cacheGeoTables = make(map[string]LatLon, 0)
 	cityNames = make(map[string]string, 0)
 	cityNames["sh"] = "上海"
 	cityNames["cs"] = "长沙"
@@ -99,6 +103,25 @@ func dbLjCollection() *mongo.Collection {
 
 // 获取小区对应的经纬度
 func getVillageLatLon(cityName, villageName string) (lat, lon float32, formattedAddress string, err error) {
+	// 先找缓存
+	items, ok := cacheGeoTables[villageName+":"+cityName]
+	if ok {
+		latLon := strings.Split(items.Location, ",")
+		lon, err := strconv.ParseFloat(latLon[0], 10)
+		if err != nil {
+			logger.Sugar.Error(err)
+			return 0, 0, "", nil
+		}
+
+		lat, err := strconv.ParseFloat(latLon[1], 10)
+		if err != nil {
+			logger.Sugar.Error(err)
+			return 0, 0, "", nil
+		}
+		return float32(lat), float32(lon), items.FormattedAddress, nil
+	}
+
+	// 再找数据库
 	table := dbGeoCollection()
 	if table != nil {
 		r := table.FindOne(context.Background(), bson.M{"villageName": villageName, "cityName": cityName})
@@ -111,6 +134,13 @@ func getVillageLatLon(cityName, villageName string) (lat, lon float32, formatted
 		lat := row["lat"].(float64)
 		lon := row["lon"].(float64)
 		formattedAddress := row["formattedAddress"].(string)
+
+		// 加入到缓存中
+		location := LatLon{}
+		// 6位小数点即可
+		location.Location = fmt.Sprintf("%.6f", lon) + "," + fmt.Sprintf("%.6f", lat)
+		location.FormattedAddress = formattedAddress
+		cacheGeoTables[villageName+":"+cityName] = location
 		return float32(lat), float32(lon), formattedAddress, nil
 	}
 
@@ -121,10 +151,22 @@ func getVillageLatLon(cityName, villageName string) (lat, lon float32, formatted
 func addVillageLatLon(cityName, villageName string, lat, lon float32, formattedAddress string) {
 	table := dbGeoCollection()
 	if table != nil {
+		tempLon := fmt.Sprintf("%.6f", lon)
+		tempLat := fmt.Sprintf("%.6f", lat)
+		fmtLon, _ := strconv.ParseFloat(tempLon, 10)
+		fmtLat, _ := strconv.ParseFloat(tempLat, 10)
+
 		_, err := table.InsertOne(context.Background(), bson.M{"villageName": villageName, "cityName": cityName,
-			"lat": lat, "lon": lon, "formattedAddress": formattedAddress})
+			"lat": fmtLat, "lon": fmtLon, "formattedAddress": formattedAddress})
 		if err != nil {
 			logger.Sugar.Error(err)
+		} else {
+			// 加入到缓存中
+			location := LatLon{}
+			// 6位小数点即可
+			location.Location = tempLon + "," + tempLat
+			location.FormattedAddress = formattedAddress
+			cacheGeoTables[villageName+":"+cityName] = location
 		}
 	}
 }
@@ -178,7 +220,7 @@ func getLocationFromUrl(cityName, villageName string) (lat float32, lon float32,
 		logger.Sugar.Errorf("geocode error:%s,villageName=%s,city=%s", jsonInfo.Status, villageName, cityName)
 	} else {
 		// 可能转码错误，请手动拾取地理坐标：https://lbs.amap.com/console/show/picker
-		if len(jsonInfo.GeoCodes) > 0 {
+		if jsonInfo.Count != "0" && len(jsonInfo.GeoCodes) > 0 {
 			// 没有办法判断，先以高德返回的为主吧
 			//if strings.Contains(jsonInfo.GeoCodes[0].FormattedAddress, villageName) {
 			formattedAddress = jsonInfo.GeoCodes[0].FormattedAddress
@@ -243,8 +285,11 @@ func StartGeocodeLJ() {
 	successCount := 0
 	startTime := time.Now()
 
+	//isAll := true
+
 	lj := dbLjCollection()
 	if lj != nil {
+		logger.Sugar.Info("查找没有经纬度的房源中...")
 		cursor, err := lj.Find(context.Background(), bson.M{"Location": bson.M{"$exists": false}})
 		defer cursor.Close(context.Background())
 
@@ -254,13 +299,38 @@ func StartGeocodeLJ() {
 		}
 
 		// 一次性加载结果到内存
+		logger.Sugar.Info("读取结果到内存...")
 		var houseArr = make([]GeoHouseInfo, 0)
+
+		//if isAll {
 		err = cursor.All(context.Background(), &houseArr)
 		if err != nil {
 			logger.Sugar.Error(err)
 			return
 		}
+		//} else {
+		//	timeoutContext, _ := context.WithTimeout(context.Background(), time.Duration(time.Second))
+		//	const testLimitCount = 1000
+		//	for i := 0; i < testLimitCount; i++ {
+		//		if cursor.Next(timeoutContext) {
+		//			geo := GeoHouseInfo{}
+		//			err := cursor.Decode(&geo)
+		//			if err != nil {
+		//				logger.Sugar.Error(err)
+		//			} else {
+		//				houseArr = append(houseArr, geo)
+		//			}
+		//		} else {
+		//			break
+		//		}
+		//		if i != 0 && i%100 == 0 {
+		//			logger.Sugar.Infof("已读取%d", i)
+		//		}
+		//	}
+		//}
 		totalCount = len(houseArr)
+
+		logger.Sugar.Info("开始反地理编码")
 		for i := range houseArr {
 			item := houseArr[i]
 
