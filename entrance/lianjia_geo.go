@@ -330,7 +330,8 @@ func StartGeocodeLJ() {
 		//}
 		totalCount = len(houseArr)
 
-		logger.Sugar.Info("开始反地理编码")
+		logger.Sugar.Infof("3秒后，开始反地理编码，总数=%d", totalCount)
+		time.Sleep(time.Duration(time.Second * 3))
 		for i := range houseArr {
 			item := houseArr[i]
 
