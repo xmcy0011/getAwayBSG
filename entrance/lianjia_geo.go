@@ -13,8 +13,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -41,6 +44,12 @@ type GeoHouseInfo struct {
 	City         string `json:"City"`
 	Title        string `json:"Title"`
 }
+
+var (
+	totalCount   = 0
+	successCount = 0
+	startTime    = time.Now()
+)
 
 func init() {
 	cacheGeoTables = make(map[string]LatLon, 0)
@@ -272,6 +281,18 @@ func geocode(cityName, villageName, link string) (lonOut, latOut float32, err er
 	return lon, lat, err
 }
 
+// 优雅退出（退出信号）
+func waitElegantExit(signalChan chan os.Signal) {
+	go func() {
+		<-signalChan
+
+		timeDiff := time.Now().Sub(startTime)
+		logger.Sugar.Infof("主动退出，成功：%d，失败：%d，总数：%d，用时：%.2f 秒=%.2f 分=%.2f 时", successCount, totalCount-successCount,
+			totalCount, timeDiff.Seconds(), timeDiff.Minutes(), timeDiff.Hours())
+		logger.Sugar.Info("如果需要继续补充，请再次执行程序，选择3即可！")
+	}()
+}
+
 // 使用高德地理编码服务
 // 补充链家所有二手房小区的经纬度，便于查询分析靠近地铁站1公里的房源
 func StartGeocodeLJ() {
@@ -281,15 +302,16 @@ func StartGeocodeLJ() {
 		return
 	}
 
-	totalCount := 0
-	successCount := 0
-	startTime := time.Now()
+	signalChan := make(chan os.Signal, 1)
+	// 注册CTRL+C：被打断通道,syscall.SIGINT
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	waitElegantExit(signalChan)
 
 	//isAll := true
 
 	lj := dbLjCollection()
 	if lj != nil {
-		logger.Sugar.Info("查找没有经纬度的房源中...")
+		logger.Sugar.Infof("查找没有经纬度的房源中，文档名=%s...", configs.ConfigInfo.TwoHandHouseCollection)
 		cursor, err := lj.Find(context.Background(), bson.M{"Location": bson.M{"$exists": false}})
 		defer cursor.Close(context.Background())
 
@@ -330,7 +352,7 @@ func StartGeocodeLJ() {
 		//}
 		totalCount = len(houseArr)
 
-		logger.Sugar.Infof("3秒后，开始反地理编码，总数=%d", totalCount)
+		logger.Sugar.Infof("3秒后，开始反地理编码，总数=%d，如果需要中断请按下Ctrl+C", totalCount)
 		time.Sleep(time.Duration(time.Second * 3))
 		for i := range houseArr {
 			item := houseArr[i]
