@@ -291,6 +291,7 @@ func waitElegantExit(signalChan chan os.Signal) {
 			totalCount, timeDiff.Seconds(), timeDiff.Minutes(), timeDiff.Hours())
 		logger.Sugar.Info("如果需要继续补充，请再次执行程序，选择3即可！")
 
+		_ = client.Disconnect(context.Background())
 		os.Exit(2)
 	}()
 }
@@ -303,6 +304,8 @@ func StartGeocodeLJ() {
 		logger.Sugar.Errorf("mongodb connect error:%s", err)
 		return
 	}
+
+	defer client.Disconnect(context.Background())
 
 	signalChan := make(chan os.Signal, 1)
 	// 注册CTRL+C：被打断通道,syscall.SIGINT
