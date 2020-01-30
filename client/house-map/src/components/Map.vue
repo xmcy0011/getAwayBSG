@@ -285,14 +285,24 @@ export default {
         style: so // 设置样式对象
       });
 
-      var marker = new AMap.Marker({ content: " ", map: this.map });
+      let marker = new AMap.Marker({ content: " ", map: this.map });
+      let lastClickTime = new Date().valueOf();
 
       // 将海量点添加至地图实例
       massMarks.setMap(this.map);
-      massMarks.on("mouseover", function(e) {
+      //mouseover
+      massMarks.on("click", function(e) {
         marker.setPosition(e.data.lnglat);
         marker.setLabel({ content: e.data.title });
+        lastClickTime = new Date().valueOf();
       });
+      setInterval(() => {
+        let timeStamp = new Date().valueOf();
+        if (timeStamp - lastClickTime > 3 * 1000 && marker.getLabel() != " ") {
+          marker.setLabel({ content: " " });
+          marker.setPosition([0, 0]);
+        }
+      }, 3000);
 
       this.massMarks = massMarks;
     },

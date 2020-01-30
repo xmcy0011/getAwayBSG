@@ -37,7 +37,9 @@ export default {
     filterHouse(element) {
       // 总价150万 - 200万
       return (
-        element.TotalPrice < 200 * 10000 && element.TotalPrice > 150 * 10000
+        element.TotalPrice < 200 * 10000 &&
+        element.TotalPrice > 150 * 10000 &&
+        element.Tag.indexOf("近地铁") > -1
       );
     },
     upload(file, fileList) {
@@ -129,7 +131,7 @@ export default {
 
           massMarsList.push({
             lnglat: [parseFloat(lon), parseFloat(lat)],
-            title: element.Title+"\r\n"+element.Link,
+            title: element.Title + "\r\n" + element.Link,
             id: i,
             style: 0
           });
