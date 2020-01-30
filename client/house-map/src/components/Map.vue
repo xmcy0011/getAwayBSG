@@ -29,55 +29,72 @@ export default {
   data() {
     return {
       map: null,
+      massMarks: null, // 海量点
       infoWindow: null,
       infoWindowMarker: null,
-      options3: [{
-        label: '推荐',
-        options: [{
-          value: 'normal',
-          label: '标准'
-        }, {
-          value: 'dark',
-          label: '幻影黑'
-        }]
-      }, {
-        label: '自定义',
-        options: [{
-          value: 'macaron',
-          label: '马卡龙'
-        }, {
-          value: 'graffiti',
-          label: '涂鸦'
-        }, {
-          value: 'fresh',
-          label: '草色青'
-        }, {
-          value: 'blue',
-          label: '靛青蓝'
-        }, {
-          value: 'whitesmoke',
-          label: '远山黛'
-        }, {
-          value: 'darkblue',
-          label: '极夜蓝'
-        }, {
-          value: 'light',
-          label: '月光银'
-        }, {
-          value: 'grey',
-          label: '雅士灰'
-        }]
-      }],
-      curMapStyle: 'normal'
+      options3: [
+        {
+          label: "推荐",
+          options: [
+            {
+              value: "normal",
+              label: "标准"
+            },
+            {
+              value: "dark",
+              label: "幻影黑"
+            }
+          ]
+        },
+        {
+          label: "自定义",
+          options: [
+            {
+              value: "macaron",
+              label: "马卡龙"
+            },
+            {
+              value: "graffiti",
+              label: "涂鸦"
+            },
+            {
+              value: "fresh",
+              label: "草色青"
+            },
+            {
+              value: "blue",
+              label: "靛青蓝"
+            },
+            {
+              value: "whitesmoke",
+              label: "远山黛"
+            },
+            {
+              value: "darkblue",
+              label: "极夜蓝"
+            },
+            {
+              value: "light",
+              label: "月光银"
+            },
+            {
+              value: "grey",
+              label: "雅士灰"
+            }
+          ]
+        }
+      ],
+      curMapStyle: "normal"
     };
   },
   mounted() {
     this.map = new AMap.Map("map-container", {
       mapStyle: "amap://styles/normal",
       zoom: 15,
-      center: [121.480331,31.153403]
+      center: [121.480331, 31.153403]
     });
-    AMap.plugin('AMap.ToolBar', () => { // 异步加载插件
+    AMap.plugin("AMap.ToolBar", () => {
+      // 异步加载插件
       let toolbar = new AMap.ToolBar({
         position: "RB"
       });
@@ -148,7 +165,7 @@ export default {
   methods: {
     // 地图自定义主题改变
     mapStyleSelectedChange(value) {
-      this.map.setMapStyle('amap://styles/' + value);
+      this.map.setMapStyle("amap://styles/" + value);
     },
     /**
      * 平滑的移动地图到某个点
@@ -166,7 +183,7 @@ export default {
     getMap() {
       return this.map;
     },
-    showWindow(/*uid*/) { },
+    showWindow(/*uid*/) {},
     /**
      * 添加一个覆盖物
      * @param {[lon]}：经度
@@ -202,7 +219,7 @@ export default {
       });
       // 绑定鼠标点击事件
       let _this = this;
-      marker.on("click", function () {
+      marker.on("click", function() {
         _this._onClickMarker(this, _this, false);
       });
       this.map.add(marker);
@@ -234,16 +251,62 @@ export default {
       this.infoWindow.close();
       this.infoWindowMarker = null;
       this.map.clearMap();
+      if (this.massMarks != null) {
+        this.massMarks.clear();
+      }
+    },
+    /**
+     * 添加一个覆盖物
+     * @param {[list]}：海量点列表
+     [{
+        lnglat: [116.405285, 39.904989], //点标记位置
+        name: 'beijing',
+        id:1
+     },{
+       lnglat: [116.405285, 39.904989], //点标记位置
+        name: 'beijing',
+        id:2
+     }]
+     */
+    addMassMarks(list) {
+      // 创建样式对象
+      let so = [
+        {
+          url: "//vdata.amap.com/icons/b18/1/2.png", // 图标地址
+          size: new AMap.Size(11, 11), // 图标大小
+          anchor: new AMap.Pixel(5, 5) // 图标显示位置偏移量，基准点为图标左上角
+        }
+      ];
+
+      let massMarks = new AMap.MassMarks(list, {
+        zIndex: 111, // 海量点图层叠加的顺序
+        cursor: "pointer",
+        zooms: [3, 19], // 在指定地图缩放级别范围内展示海量点图层
+        style: so // 设置样式对象
+      });
+
+      var marker = new AMap.Marker({ content: " ", map: this.map });
+
+      // 将海量点添加至地图实例
+      massMarks.setMap(this.map);
+      massMarks.on("mouseover", function(e) {
+        marker.setPosition(e.data.lnglat);
+        marker.setLabel({ content: e.data.title });
+      });
+
+      this.massMarks = massMarks;
     },
     /**
      * 覆盖物点击，弹出信息窗口
      */
     _onClickMarker(marker, _this, update) {
       let info = marker.getExtData();
-      let content = _this._getInfoWindowContent(info,
+      let content = _this._getInfoWindowContent(
+        info,
         marker.getTitle(),
         marker.getPosition().getLng(),
-        marker.getPosition().getLat());
+        marker.getPosition().getLat()
+      );
       // 显示信息窗口
       _this.infoWindowMarker = marker;
       _this.infoWindow.setContent(content.join(""));
@@ -281,33 +344,112 @@ export default {
       // 构建信息窗体中显示的内容
       var info = [];
       info.push("<div class='input-card content-window-card'>");
-      info.push("<div style=\"padding:7px 0px 0px 0px;\"><p class='input-item' style='font-size:18px;margin-top:7px;'>" + text + "</p>");
+      info.push(
+        "<div style=\"padding:7px 0px 0px 0px;\"><p class='input-item' style='font-size:18px;margin-top:7px;'>" +
+          text +
+          "</p>"
+      );
       if (data.status === "成功") {
-        info.push("<p class='input-item'>" + "定位状态 : " + (data.status !== null ? data.status : "未知") + "</p>");
+        info.push(
+          "<p class='input-item'>" +
+            "定位状态 : " +
+            (data.status !== null ? data.status : "未知") +
+            "</p>"
+        );
       } else {
-        info.push("<p class='input-item' style='color:red;height:30px;'>" + "定位状态 : " + (data.status !== null ? data.status : "未知") + "</p>");
+        info.push(
+          "<p class='input-item' style='color:red;height:30px;'>" +
+            "定位状态 : " +
+            (data.status !== null ? data.status : "未知") +
+            "</p>"
+        );
       }
-      info.push("<p class='input-item'>" + "定位模式 : " + (data.locationMode !== null ? data.locationMode : "未知") + "</p>");
-      info.push("<p class='input-item'>" + "定位来源 : " + (data.locationType !== null ? data.locationType : "未知") + "</p>");
+      info.push(
+        "<p class='input-item'>" +
+          "定位模式 : " +
+          (data.locationMode !== null ? data.locationMode : "未知") +
+          "</p>"
+      );
+      info.push(
+        "<p class='input-item'>" +
+          "定位来源 : " +
+          (data.locationType !== null ? data.locationType : "未知") +
+          "</p>"
+      );
       if (data.gpsAccuracyStatus === "卫星信号强") {
-        info.push("<p class='input-item' style='color:green;'>" + "GPS状态 : " + (data.gpsAccuracyStatus !== null ? data.gpsAccuracyStatus : "未知") + "</p>");
+        info.push(
+          "<p class='input-item' style='color:green;'>" +
+            "GPS状态 : " +
+            (data.gpsAccuracyStatus !== null
+              ? data.gpsAccuracyStatus
+              : "未知") +
+            "</p>"
+        );
       } else {
-        info.push("<p class='input-item' style='color:#EA7500;'>" + "GPS状态 : " + (data.gpsAccuracyStatus !== null ? data.gpsAccuracyStatus : "未知") + "</p>");
+        info.push(
+          "<p class='input-item' style='color:#EA7500;'>" +
+            "GPS状态 : " +
+            (data.gpsAccuracyStatus !== null
+              ? data.gpsAccuracyStatus
+              : "未知") +
+            "</p>"
+        );
       }
       if (data.trustedLevel === "非常可信") {
-        info.push("<p class='input-item' style='color:green;'>" + "定位结果可信度 : " + (data.trustedLevel !== null ? data.trustedLevel : "未知") + "</p>");
+        info.push(
+          "<p class='input-item' style='color:green;'>" +
+            "定位结果可信度 : " +
+            (data.trustedLevel !== null ? data.trustedLevel : "未知") +
+            "</p>"
+        );
       } else {
-        info.push("<p class='input-item'>" + "定位结果可信度 : " + (data.trustedLevel !== null ? data.trustedLevel : "未知") + "</p>");
+        info.push(
+          "<p class='input-item'>" +
+            "定位结果可信度 : " +
+            (data.trustedLevel !== null ? data.trustedLevel : "未知") +
+            "</p>"
+        );
       }
-      info.push("<p class='input-item'>" + "精度 : " + (data.accuracy !== null ? data.accuracy : "未知") + "米</p>");
-      info.push("<p class='input-item'>" + "速度 : " + (data.speed !== null ? data.speed : "未知") + "米/秒</p>");
-      info.push("<p class='input-item'>" + "方向 : " + (data.direct !== null ? data.direct : "未知") + "</p>");
-      info.push("<p class='input-item'>" + "定位时间 : " + (data.time !== null ? data.time : "未知") + "</p>");
-      info.push("<p class='input-item'>" + "地址 : " + (data.address !== null ? data.address : "未知") + "</p>");
-      info.push("<p class='input-item'>" + "经纬度 : " + (lng + "," + lat) + "</p>");
+      info.push(
+        "<p class='input-item'>" +
+          "精度 : " +
+          (data.accuracy !== null ? data.accuracy : "未知") +
+          "米</p>"
+      );
+      info.push(
+        "<p class='input-item'>" +
+          "速度 : " +
+          (data.speed !== null ? data.speed : "未知") +
+          "米/秒</p>"
+      );
+      info.push(
+        "<p class='input-item'>" +
+          "方向 : " +
+          (data.direct !== null ? data.direct : "未知") +
+          "</p>"
+      );
+      info.push(
+        "<p class='input-item'>" +
+          "定位时间 : " +
+          (data.time !== null ? data.time : "未知") +
+          "</p>"
+      );
+      info.push(
+        "<p class='input-item'>" +
+          "地址 : " +
+          (data.address !== null ? data.address : "未知") +
+          "</p>"
+      );
+      info.push(
+        "<p class='input-item'>" + "经纬度 : " + (lng + "," + lat) + "</p>"
+      );
       // info.push("<div class='row'><button id='btnVoice' type='button' class='btn btn-default'>语音通话</button>");
-      info.push("<div class='row'><button id='btnVideo' type='button' class='btn btn-default'>视频查看</button>");
-      info.push("<button id='btnTrace' type='button' class='btn btn-default'>历史轨迹</button></div>");
+      info.push(
+        "<div class='row'><button id='btnVideo' type='button' class='btn btn-default'>视频查看</button>"
+      );
+      info.push(
+        "<button id='btnTrace' type='button' class='btn btn-default'>历史轨迹</button></div>"
+      );
       info.push("</div></div>");
       return info;
     }
@@ -325,7 +467,7 @@ export default {
   left: 30px;
   bottom: 70px;
   background: #ffffff;
-  
+
   border-radius: 5px;
   border-color: #ebebeb;
 }
