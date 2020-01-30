@@ -359,10 +359,10 @@ MongoDB Compass:
 {
   'Location': {
     $nearSphere: {
-      $geometry: {type: 'Point', coordinates: [112.984947, 28.195951]},
-      $maxDistance: 2000
+      $geometry: {type: 'Point', coordinates: [121.493443,31.161054]},
+      $maxDistance: 1000
     }
-  }
+  },'TotalPrice':{'$lt':2000000}
 }
 ```
 
