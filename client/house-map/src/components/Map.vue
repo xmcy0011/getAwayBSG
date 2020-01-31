@@ -24,6 +24,8 @@
 <script>
 // @ is an alias to /src
 import AMap from "AMap";
+const shellEle = require("electron").shell;
+
 export default {
   name: "home",
   data() {
@@ -255,6 +257,9 @@ export default {
         this.massMarks.clear();
       }
     },
+    openUrl(link) {
+      shellEle.openExternal(link);
+    },
     /**
      * 添加一个覆盖物
      * @param {[list]}：海量点列表
@@ -342,7 +347,11 @@ export default {
             "元(总价)"
         );
         content.push(
-          "链接：<a target='_blank' href='" + h.Link + "'>" + h.Link + "</a>"
+          "链接：<span id='houseLick' data='" +
+            h.Link +
+            "'>" +
+            h.Link +
+            "</span>"
         );
         content.push("区域：" + h.ListVillageName + " " + h.ListAreaName);
         content.push("大小：" + h.ListHouseSize + " 平米," + h.ListHouseWhat);
@@ -351,44 +360,48 @@ export default {
           "标签：" +
             h.Tag.substring(1, h.Tag.length - 2)
               .split(",")
-              .join(" ").replace(/"/g,"")
+              .join(" ")
+              .replace(/"/g, "")
         );
         content.push(
           "地址1：<br/>" +
             h.AreaName.substring(1, h.AreaName.length - 2)
               .split(",")
-              .join(" ").replace(/"/g,"")
+              .join(" ")
+              .replace(/"/g, "")
         );
         content.push("地址2：" + h.FormattedAddress);
         content.push(
           "详情：<br/>" +
             h.BaseAttr.substring(1, h.BaseAttr.length - 2)
               .split(",")
-              .join(" ").replace(/"/g,"")
+              .join(" ")
+              .replace(/"/g, "")
         );
         content.push(
           "其他：<br/>" +
             h.TransactionAttr.substring(1, h.TransactionAttr.length - 2)
               .split(",")
-              .join(" ").replace(/"/g,"")
+              .join(" ")
+              .replace(/"/g, "")
         );
         content.push("</div>");
         // 打开信息窗体
         infoWindow.setPosition(e.data.lnglat);
         infoWindow.setContent(content.join("<br/>"));
         infoWindow.open(_this.map);
-
-        // marker.setPosition(e.data.lnglat);
-        // marker.setLabel({ content: htmlContent });
-        //lastClickTime = new Date().valueOf();
+        setTimeout(
+          link => {
+            let span = document.getElementById("houseLick");
+            span.onclick = function() {
+              console.log("span click" + this.getAttribute("data"));
+              _this.openUrl(this.getAttribute("data"));
+            };
+          },
+          1000,
+          e.data.Link
+        );
       });
-      // setInterval(() => {
-      //   let timeStamp = new Date().valueOf();
-      //   if (timeStamp - lastClickTime > 3 * 1000 && marker.getLabel() != " ") {
-      //     marker.setLabel({ content: " " });
-      //     marker.setPosition([0, 0]);
-      //   }
-      // }, 3000);
       this.massMarks = massMarks;
     },
     /**

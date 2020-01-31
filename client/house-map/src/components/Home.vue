@@ -1,17 +1,17 @@
 <template>
   <el-container id="app">
-      <Map ref="map" />
-      <el-upload
-        class="overButton"
-        ref="uploads"
-        accept=".xls, .xlsx, .csv"
-        action
-        :on-change="upload"
-        :show-file-list="false"
-        :auto-upload="false"
-      >
-        <el-button slot="trigger" size="small" type="primary" icon="el-icon-upload">打开excel</el-button>
-      </el-upload>
+    <Map ref="map" />
+    <el-upload
+      class="overButton"
+      ref="uploads"
+      accept=".xls, .xlsx, .csv"
+      action
+      :on-change="upload"
+      :show-file-list="false"
+      :auto-upload="false"
+    >
+      <el-button slot="trigger" size="small" type="primary" icon="el-icon-upload">打开excel</el-button>
+    </el-upload>
   </el-container>
 </template>
 
@@ -44,7 +44,17 @@ export default {
     },
     upload(file, fileList) {
       let files = { 0: file.raw };
+      const loading = this.$loading({
+        lock: true,
+        text: "Loading",
+        spinner: "el-icon-loading",
+        background: "rgba(0, 0, 0, 0.7)"
+      });
+
       this.loadExcel(files);
+      // setTimeout(() => {
+      loading.close();
+      // }, 2000);
     },
     loadExcel(files) {
       var that = this;
