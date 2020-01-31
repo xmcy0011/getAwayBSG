@@ -2,23 +2,32 @@
   <div class="full">
     <div id="map-container"></div>
     <div class="mapStyle">
-      <el-select
-        size="small"
-        style="width:100px;"
-        v-model="curMapStyle"
-        placeholder="请选择"
-        @change="mapStyleSelectedChange"
-      >
-        <el-option-group v-for="group in options3" :key="group.label" :label="group.label">
-          <el-option
-            v-for="item in group.options"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          ></el-option>
-        </el-option-group>
-      </el-select>
-      <el-button size="small" @click="_onClickRangingTool" style="margin-left:5px;">测距</el-button>
+      <el-row>
+        <el-select
+          size="small"
+          style="width:100px;"
+          v-model="curMapStyle"
+          placeholder="请选择"
+          @change="_mapStyleSelectedChange"
+        >
+          <el-option-group v-for="group in options3" :key="group.label" :label="group.label">
+            <el-option
+              v-for="item in group.options"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            ></el-option>
+          </el-option-group>
+        </el-select>
+
+        <el-button size="small" @click="_onClickRangingTool" style="margin-left:5px;">测距</el-button>
+      </el-row>
+      <el-row style="background-color:white;margin-top:5px;">
+        <div>
+          <el-checkbox v-model="itAreaChecked" @change="_loadItArea(itAreaChecked)">科技园</el-checkbox>
+          <el-checkbox v-model="itCompanyChecked" @change="_loadItCompany(itCompanyChecked)">IT公司</el-checkbox>
+        </div>
+      </el-row>
     </div>
   </div>
 </template>
@@ -26,7 +35,8 @@
 <script>
 // @ is an alias to /src
 import AMap from "AMap";
-const shellEle = require("electron").shell;
+const shellEle = require("electron").shell; // electron shell
+const Store = require("electron-store"); // electron storage
 
 export default {
   name: "home",
@@ -89,7 +99,12 @@ export default {
           ]
         }
       ],
-      curMapStyle: "normal"
+      curMapStyle: "normal",
+      curHouseMarker: null, // 当前激活的房源
+      itCompanyAreaList: [], // 上海科技园,
+      itCompanyList: [], // 上海It公司
+      itAreaChecked: true,
+      itCompanyChecked: true
     };
   },
   mounted() {
@@ -114,157 +129,12 @@ export default {
     AMap.plugin(["AMap.RangingTool"], function() {
       _this.ruler = new AMap.RangingTool(_this.map);
     });
-    // 创建 infoWindow 实例
-    this.infoWindow = new AMap.InfoWindow();
-    // 窗口打开时，绑定按钮点击事件
-    this.infoWindow.on("change", () => {
-      //console.log("infowindow is change");
-      // 窗口显示，需要时间
-      setTimeout(() => {
-        let elem = document.getElementById("btnVoice");
-        if (elem != null) {
-          elem.onclick = () => {
-            this._onClickInfoWindowBtnVoice();
-          };
-        }
-        elem = document.getElementById("btnVideo");
-        if (elem != null) {
-          elem.onclick = () => {
-            this._onClickInfoWindowBtnVideo();
-          };
-        }
-        elem = document.getElementById("btnTrace");
-        if (elem != null) {
-          elem.onclick = () => {
-            this._onClickInfoWindowBtnTrace();
-          };
-        }
-      }, 200);
-    });
-    /*
-    // 单元测试代码
-    setTimeout(() => {
-      console.log("this.add()");
-      let marker = this.add(120.729577, 31.265226, "设备1", {
-        uid: "test1", // 唯一标志
-        locationType: null, // 获取当前定位结果来源，如网络定位结果，详见定位类型表 https://lbs.amap.com/api/android-location-sdk/guide/utilities/location-type
-        gpsAccuracyStatus: "强", // GPS的当前状态
-        trustedLevel: null, // 定位结果的可信度
-        accuracy: "100米", // 精度信息，单位:米
-        speed: null, // 速度
-        direct: null, // 方向
-        status: null, // 定位状态
-        time: "2018-12-08 16:43:01", // 定位时间
-        address: null // 地址
-      });
-      setTimeout(
-        m => {
-          console.log("this.update()");
-          this.update(m, 120.729577, 31.267226, "2018-12-08 17:00:32", null, null, null);
-          setTimeout(() => {
-            console.log("this.clear()");
-            this.clear();
-          }, 5000);
-        },
-        5000,
-        marker
-      );
-    }, 2000);
-    */
+    // 加载著名上海科技园
+    this._loadItArea();
+    this._loadItCompany();
   },
   methods: {
-    // 地图自定义主题改变
-    mapStyleSelectedChange(value) {
-      this.map.setMapStyle("amap://styles/" + value);
-    },
-    /**
-     * 平滑的移动地图到某个点
-     * @param {[lon]}：经度
-     * @param {[lat]}：维度
-     */
-    panTo(lon, lat) {
-      this.map.panTo([lon, lat]);
-    },
-    /**
-     * 获取地图的实例对象
-     * @param {[lon]}：经度
-     * @param {[lat]}：维度
-     */
-    getMap() {
-      return this.map;
-    },
-    showWindow(/*uid*/) {},
-    /**
-     * 添加一个覆盖物
-     * @param {[lon]}：经度
-     * @param {[lat]}：维度
-     * @param {[text]}：要显示的文本
-     * @param {[descObject]}：覆盖物的各种描述信息 {
-        uid: uid, // 唯一标志
-        locationType: null, // 获取当前定位结果来源，如网络定位结果，详见定位类型表 https://lbs.amap.com/api/android-location-sdk/guide/utilities/location-type
-        gpsAccuracyStatus: null, // GPS的当前状态
-        trustedLevel: null, // 定位结果的可信度
-        accuracy: accuracy, // 精度信息，单位:米
-        speed: speed, // 速度
-        direct: direct, // 方向
-        status: status, // 定位状态
-        time: time, // 定位时间
-        address: null, // 地址
-      }
-     * @return marker
-     */
-    add(lon, lat, text, descObject) {
-      // 小三角、和阴影
-      const content = `<div class="test_triangle_border">
-                        <div class="popup">
-                          <em></em><span></span>${text}
-                        </div>
-                       </div>`;
-      let marker = new AMap.Marker({
-        content: content, // 自定义点标记覆盖物内容
-        position: [lon, lat],
-        title: text,
-        offset: new AMap.Pixel(-75, -72),
-        extData: descObject
-      });
-      // 绑定鼠标点击事件
-      let _this = this;
-      marker.on("click", function() {
-        _this._onClickMarker(this, _this, false);
-      });
-      this.map.add(marker);
-      return marker;
-    },
-    /**
-     * 更新覆盖物的坐标
-     * @param {[marker]}：覆盖物
-     * @param {[newLon]}：新的经度
-     * @param {[newLat]}：新的维度
-     */
-    update(marker, newLon, newLat, descObject) {
-      marker.setPosition([newLon, newLat]);
-      // 保存自定义信息
-      let data = marker.getExtData();
-      if (data === undefined || data === null) {
-        return;
-      }
-      marker.setExtData(descObject);
-      // 此时得更新infoWindow
-      if (marker === this.infoWindowMarker && this.infoWindow.getIsOpen()) {
-        this._onClickMarker(marker, this, true);
-      }
-    },
-    /**
-     * 清楚所有覆盖物
-     */
-    clear() {
-      this.infoWindow.close();
-      this.infoWindowMarker = null;
-      this.map.clearMap();
-      if (this.massMarks != null) {
-        this.massMarks.clear();
-      }
-    },
+    // 使用默认浏览器打开
     openUrl(link) {
       shellEle.openExternal(link);
     },
@@ -284,6 +154,7 @@ export default {
      }]
      */
     addMassMarks(list) {
+      let _this = this;
       // 创建样式对象
       let so = [
         {
@@ -295,8 +166,25 @@ export default {
           url: require("../assets/wujiaoxing_black.png"), // 图标地址
           size: new AMap.Size(11, 11), // 图标大小
           anchor: new AMap.Pixel(5, 5) // 图标显示位置偏移量，基准点为图标左上角
+        },
+        {
+          url: require("../assets/wujiaoxing_yellow.png"), // 图标地址
+          size: new AMap.Size(11, 11), // 图标大小
+          anchor: new AMap.Pixel(5, 5) // 图标显示位置偏移量，基准点为图标左上角
         }
       ];
+
+      list.forEach(item => {
+        // 收藏，则标记
+        let type = _this._checkHouseIsCollect(item.full.HouseRecordLJ);
+        if (type == 1) {
+          // like
+          item.style = 2;
+        } else if (type == 2) {
+          // dislike
+          item.style = 1;
+        }
+      });
 
       let massMarks = new AMap.MassMarks(list, {
         zIndex: 111, // 海量点图层叠加的顺序
@@ -310,7 +198,6 @@ export default {
 
       // 创建 infoWindow 实例
       let infoWindow = new AMap.InfoWindow();
-      let _this = this;
 
       // 将海量点添加至地图实例
       massMarks.setMap(this.map);
@@ -338,6 +225,7 @@ export default {
         // TransactionAttr: "["交易权属:动迁安置房","上次交易:2012-10-22","房屋用途:普通住宅","房屋年限:满五年","产权所属:共有","抵押信息:无抵押","房本备件:已上传房本照片"]"
         // FormattedAddress: "上海市浦东新区星颂家园"
         let h = e.data.full;
+        _this.curHouseMarker = e;
 
         // 信息窗体的内容
         let content = ["<div style='font-size:12px;'>"];
@@ -398,6 +286,13 @@ export default {
               .join(" ")
               .replace(/"/g, "")
         );
+        content.push(
+          "<button id='btnCollect' houseId='" +
+            h.HouseRecordLJ +
+            "'>收藏</button><button id='btnDisCollect' houseId='" +
+            h.HouseRecordLJ +
+            "' style='margin-left:5px;'>不看</button>"
+        );
         content.push("</div>");
         // 打开信息窗体
         infoWindow.setPosition(e.data.lnglat);
@@ -410,6 +305,23 @@ export default {
               console.log("span click" + this.getAttribute("data"));
               _this.openUrl(this.getAttribute("data"));
             };
+
+            let btnLike = document.getElementById("btnCollect");
+            if (btnLike != null) {
+              btnLike.onclick = function() {
+                console.log("like:" + this.getAttribute("houseId"));
+                _this._saveOrUpdateHouse(this.getAttribute("houseId"), 1);
+                _this.curHouseMarker.data.style = 2;
+              };
+            }
+            let btnDislike = document.getElementById("btnDisCollect");
+            if (btnDislike != null) {
+              btnDislike.onclick = function() {
+                console.log("dislike:" + this.getAttribute("houseId"));
+                _this._saveOrUpdateHouse(this.getAttribute("houseId"), 2);
+                _this.curHouseMarker.data.style = 1;
+              };
+            }
           },
           1000,
           e.data.Link
@@ -420,168 +332,160 @@ export default {
       });
       this.massMarks = massMarks;
     },
+    // 清楚所有覆盖物
+    clear() {
+      this.map.clearMap();
+      if (this.massMarks != null) {
+        this.massMarks.clear();
+      }
+    },
+    // 收藏 collectType:0,delete,1:like,2:dislike
+    _saveOrUpdateHouse(hourseId, collectType) {
+      if (collectType == 1 || collectType == 2) {
+        const store = new Store();
+        store.set("house_" + hourseId, collectType);
+        console.log(store.get("house_" + hourseId));
+      } else {
+        store.delete("house_" + hourseId);
+      }
+    },
+    //是否收藏
+    _checkHouseIsCollect(hourseId) {
+      const store = new Store();
+      return store.get("house_" + hourseId);
+    },
+    // 测距
     _onClickRangingTool() {
       console.log("_onClickRangingTool");
       if (this.ruler != null) {
         this.ruler.turnOn();
       }
     },
-    /**
-     * 覆盖物点击，弹出信息窗口
-     */
-    _onClickMarker(marker, _this, update) {
-      let info = marker.getExtData();
-      let content = _this._getInfoWindowContent(
-        info,
-        marker.getTitle(),
-        marker.getPosition().getLng(),
-        marker.getPosition().getLat()
-      );
-      // 显示信息窗口
-      _this.infoWindowMarker = marker;
-      _this.infoWindow.setContent(content.join(""));
-      if (update) {
-        _this.infoWindow.setPosition(marker.getPosition());
-      } else {
-        _this.infoWindow.open(_this.map, marker.getPosition());
+    // 地图自定义主题改变
+    _mapStyleSelectedChange(value) {
+      this.map.setMapStyle("amap://styles/" + value);
+    },
+    // 加载 上海著名IT科技园，张江、漕河泾、五角场、紫竹
+    _loadItArea(add) {
+      // 121.594377,31.206623 浦东新区张江高科技园区
+      // 121.397769,31.170644 徐汇区漕河泾开发区
+      // 121.513906,31.304645 杨浦区五角场创智天地
+      // 121.45126,31.02279 闵行区紫竹科学园区
+      let _this = this;
+      // clear
+      this.itCompanyAreaList.forEach(element => {
+        _this.map.remove(element);
+      });
+      this.itCompanyAreaList.slice(0, this.itCompanyAreaList.length); // clear
+      if (add || add == undefined) {
+        this._addArea(121.594377, 31.206623, "张江高科");
+        this._addArea(121.397769, 31.170644, "漕河泾");
+        this._addArea(121.513906, 31.304645, "五角场");
+        this._addArea(121.45126, 31.02279, "紫竹");
       }
     },
-    // 信息框中，语音通话按钮被点击
-    _onClickInfoWindowBtnVoice() {
-      //console.log("btnVoice is clicked!");
+    // 添加一个区域
+    _addArea(lon, lat, title) {
+      let circle = new AMap.Circle({
+        center: new AMap.LngLat(lon, lat), // 圆心位置
+        radius: 500, // 圆半径
+        fillColor: "gray", // 圆形填充颜色
+        fillOpacity: 0.2,
+        strokeColor: "#fff", // 描边颜色
+        strokeWeight: 2 // 描边宽度
+      });
+      // 创建一个 Marker 实例：
+      // let marker = new AMap.Text({
+      //   position: new AMap.LngLat(lon, lat),
+      //   text: title
+      // });
+      // 小三角、和阴影
+      const content = `<div class="test_triangle_border">
+                        <div class="popup">
+                          <em></em><span></span>${title}
+                        </div>
+                       </div>`;
+      let marker = new AMap.Marker({
+        content: content, // 自定义点标记覆盖物内容
+        position: [lon, lat],
+        title: title,
+        offset: new AMap.Pixel(-75, -72)
+      });
+
+      this.itCompanyAreaList.push(marker);
+      this.itCompanyAreaList.push(circle);
+
+      // 将创建的点标记添加到已有的地图实例：
+      this.map.add(marker);
+      this.map.add(circle);
     },
-    // 信息框中，视频查看按钮被点击
-    _onClickInfoWindowBtnVideo() {
-      //console.log("btnVideo is clicked!");
-      let userName = this.infoWindowMarker.getExtData().uid;
-      // 传递给window
-      window.app.CefWebFunction("onVideoBtnClicked", userName);
+    // 加载，上海著名互联网公司
+    _loadItCompany(add) {
+      let _this = this;
+      this.itCompanyList.forEach(element => {
+        _this.map.remove(element);
+      });
+      this.itCompanyList.slice(0, this.itCompanyList.length); // clear
+      if (add || add == undefined) {
+        this._addCompany(121.506414, 31.309352, "哔哩哔哩");
+        this._addCompany(121.488982, 31.255272, "网易");
+        this._addCompany(121.604903, 31.179749, "陆金所");
+        this._addCompany(121.605876, 31.179705, "百度");
+        this._addCompany(121.62648, 31.217651, "喜马拉雅");
+        this._addCompany(121.387672, 31.166692, "今日头条");
+        this._addCompany(121.397336, 31.167389, "腾讯");
+        this._addCompany(121.47633, 31.256971, "饿了么");
+        this._addCompany(121.425928, 31.219444, "拼多多");
+        this._addCompany(121.526575, 31.080261, "泛微");
+        this._addCompany(121.542336, 31.27552, "UCloud");
+        this._addCompany(121.384473, 31.2141, "深兰科技");
+        this._addCompany(121.494233, 31.248829, "大疆创新");
+        this._addCompany(121.512506, 31.306694, "声网");
+        this._addCompany(121.549879, 31.226638, "蚂蚁金服");
+        this._addCompany(121.603265, 31.180476, "盛大游戏");
+        this._addCompany(121.531287, 31.218108, "蜻蜓FM");
+        this._addCompany(121.478772, 31.205269, "点融");
+        this._addCompany(121.254768, 31.330339, "小红书");
+        this._addCompany(121.434285, 31.201397, "高德");
+        this._addCompany(121.517926, 31.203763, "唯品会");
+        this._addCompany(121.349475, 31.229919, "爱奇艺");
+        this._addCompany(121.351152, 31.22074, "携程");
+        this._addCompany(121.418106, 31.177024, "miHoYo");
+        this._addCompany(121.363962, 31.12282, "哈啰出行");
+        this._addCompany(121.26557, 31.055322, "巨人网络");
+        this._addCompany(121.420766, 31.192054, "掌门一对一");
+        this._addCompany(121.596878, 31.187542, "WIFI钥匙");
+        this._addCompany(121.407518, 31.17156, "捞月狗");
+        this._addCompany(121.392529, 31.232237, "晓黑板");
+        this._addCompany(121.399583, 31.165317, "鱼泡泡");
+        this._addCompany(121.580688, 31.199923, "阅文集团");
+        this._addCompany(121.512966, 31.30737, "商米");
+        this._addCompany(121.620012, 31.256955, "万达信息");
+        this._addCompany(121.626833, 31.208961, "趣头条");
+        this._addCompany(121.533813, 31.272623, "英语流利说");
+        this._addCompany(121.436295, 31.18491, "轻轻家教");
+        this._addCompany(121.463089, 31.02068, "Intel");
+        this._addCompany(121.409258, 31.171887, "微软");
+        this._addCompany(121.519372, 31.077439, "万达股份");
+      }
     },
-    // 信息框中，轨迹按钮被点击
-    _onClickInfoWindowBtnTrace() {
-      // 跳转到历史轨迹回放界面
-      if (this.infoWindowMarker === null) {
-        return;
-      }
-      let userName = this.infoWindowMarker.getExtData().uid;
-      //console.log("跳转到历史轨迹界面，用户名：" + userName);
-      this.$router.push({ name: "history", params: { userName: userName } });
-    },
-    /**
-     * 获取信息框内显示的内容
-     */
-    _getInfoWindowContent(data, text, lng, lat) {
-      // 构建信息窗体中显示的内容
-      var info = [];
-      info.push("<div class='input-card content-window-card'>");
-      info.push(
-        "<div style=\"padding:7px 0px 0px 0px;\"><p class='input-item' style='font-size:18px;margin-top:7px;'>" +
-          text +
-          "</p>"
-      );
-      if (data.status === "成功") {
-        info.push(
-          "<p class='input-item'>" +
-            "定位状态 : " +
-            (data.status !== null ? data.status : "未知") +
-            "</p>"
-        );
-      } else {
-        info.push(
-          "<p class='input-item' style='color:red;height:30px;'>" +
-            "定位状态 : " +
-            (data.status !== null ? data.status : "未知") +
-            "</p>"
-        );
-      }
-      info.push(
-        "<p class='input-item'>" +
-          "定位模式 : " +
-          (data.locationMode !== null ? data.locationMode : "未知") +
-          "</p>"
-      );
-      info.push(
-        "<p class='input-item'>" +
-          "定位来源 : " +
-          (data.locationType !== null ? data.locationType : "未知") +
-          "</p>"
-      );
-      if (data.gpsAccuracyStatus === "卫星信号强") {
-        info.push(
-          "<p class='input-item' style='color:green;'>" +
-            "GPS状态 : " +
-            (data.gpsAccuracyStatus !== null
-              ? data.gpsAccuracyStatus
-              : "未知") +
-            "</p>"
-        );
-      } else {
-        info.push(
-          "<p class='input-item' style='color:#EA7500;'>" +
-            "GPS状态 : " +
-            (data.gpsAccuracyStatus !== null
-              ? data.gpsAccuracyStatus
-              : "未知") +
-            "</p>"
-        );
-      }
-      if (data.trustedLevel === "非常可信") {
-        info.push(
-          "<p class='input-item' style='color:green;'>" +
-            "定位结果可信度 : " +
-            (data.trustedLevel !== null ? data.trustedLevel : "未知") +
-            "</p>"
-        );
-      } else {
-        info.push(
-          "<p class='input-item'>" +
-            "定位结果可信度 : " +
-            (data.trustedLevel !== null ? data.trustedLevel : "未知") +
-            "</p>"
-        );
-      }
-      info.push(
-        "<p class='input-item'>" +
-          "精度 : " +
-          (data.accuracy !== null ? data.accuracy : "未知") +
-          "米</p>"
-      );
-      info.push(
-        "<p class='input-item'>" +
-          "速度 : " +
-          (data.speed !== null ? data.speed : "未知") +
-          "米/秒</p>"
-      );
-      info.push(
-        "<p class='input-item'>" +
-          "方向 : " +
-          (data.direct !== null ? data.direct : "未知") +
-          "</p>"
-      );
-      info.push(
-        "<p class='input-item'>" +
-          "定位时间 : " +
-          (data.time !== null ? data.time : "未知") +
-          "</p>"
-      );
-      info.push(
-        "<p class='input-item'>" +
-          "地址 : " +
-          (data.address !== null ? data.address : "未知") +
-          "</p>"
-      );
-      info.push(
-        "<p class='input-item'>" + "经纬度 : " + (lng + "," + lat) + "</p>"
-      );
-      // info.push("<div class='row'><button id='btnVoice' type='button' class='btn btn-default'>语音通话</button>");
-      info.push(
-        "<div class='row'><button id='btnVideo' type='button' class='btn btn-default'>视频查看</button>"
-      );
-      info.push(
-        "<button id='btnTrace' type='button' class='btn btn-default'>历史轨迹</button></div>"
-      );
-      info.push("</div></div>");
-      return info;
+    _addCompany(lon, lat, title) {
+      // 创建一个 Marker 实例：
+      const content = `<div class="test_triangle_border_2">
+                        <div class="popup">
+                          <em></em><span></span>${title}
+                        </div>
+                       </div>`;
+      let marker = new AMap.Marker({
+        content: content, // 自定义点标记覆盖物内容
+        position: [lon, lat],
+        title: title,
+        offset: new AMap.Pixel(-75, -72)
+      });
+
+      this.itCompanyAreaList.push(marker);
+      // 将创建的点标记添加到已有的地图实例：
+      this.map.add(marker);
     }
   }
 };
@@ -603,95 +507,31 @@ export default {
   width: 100%;
   height: 100%;
 }
-.input-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  word-wrap: break-word;
-  background-color: #fff;
-  background-clip: border-box;
-  border-radius: 0.25rem;
-  width: 18rem;
-  border-width: 0;
-  border-radius: 0.4rem;
-  box-shadow: 0 2px 6px 0 rgba(114, 124, 245, 0.5);
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  -ms-flex: 1 1 auto;
-  flex: 1 1 auto;
-  padding: 0.75rem 1.25rem;
-}
-.input-item {
-  position: relative;
-  display: -ms-flexbox;
-  display: flex;
-  -ms-flex-wrap: wrap;
-  flex-wrap: wrap;
-  -ms-flex-align: center;
-  align-items: center;
-  width: 100%;
-  font-size: 13px;
-  height: 24px;
-  line-height: 16.8px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-    "Segoe UI Symbol", "Noto Color Emoji";
-}
-.content-window-card {
-  position: relative;
-  width: 18rem;
-  padding: 0 0 0 0.5rem;
-  box-shadow: none;
-  bottom: 0;
-  left: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-    "Segoe UI Symbol", "Noto Color Emoji";
-  line-height: 1.5;
-  color: #111213;
-}
-.content-window-card p {
-  height: 0.8rem;
-}
-.btn {
-  display: inline-block;
-  margin: 4px;
-  width: 80px;
-  height: 30px;
-  font-weight: 400;
-  font-size: 14px;
-  text-align: center;
-  vertical-align: middle;
-  touch-action: manipulation;
-  cursor: pointer;
-  background-image: none;
-  border: 1px solid transparent;
-  white-space: nowrap;
-}
-.btn:hover {
-  color: #333;
-  text-decoration: none;
-}
-.btn:active {
-  outline: 0;
-  background-image: none;
-  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-}
-.btn-default {
-  color: #333;
-  background-color: #fff;
-  border-color: #ccc;
-}
 /*自定义图标样式*/
 .test_triangle_border .popup {
-  width: 80px;
+  width: 60px;
   background: #027cf6;
   padding: 5px 5px 7px 5px;
   color: #ffffff;
   text-align: center;
   border-radius: 4px;
   position: absolute;
+  font-size: 12px;
+  top: 30px;
+  left: 30px;
+}
+.test_triangle_border_2 .popup {
+  width: 60px;
+  background: #ff9966;
+  padding: 4px 4px 6px 4px;
+  color: #ffffff;
+  text-align: center;
+  border-radius: 4px;
+  border-color: #ffffff;
+  border-width: 1px 1px 0;
+  border-style: solid;
+  position: absolute;
+  font-size: 12px;
   top: 30px;
   left: 30px;
 }
@@ -707,8 +547,30 @@ export default {
   bottom: -8px;
   left: 37px;
 }
+.test_triangle_border_2 span {
+  display: block;
+  width: 0;
+  height: 0;
+  border-width: 8px 8px 0;
+  border-style: solid;
+  border-color: #ff9966 transparent transparent; /*黄 透明 透明 */
+  position: absolute;
+  bottom: -8px;
+  left: 37px;
+}
 /*小阴影*/
 .test_triangle_border em {
+  width: 10px;
+  height: 5px;
+  margin: 3px;
+  background: #646464;
+  opacity: 0.5;
+  border-radius: 50% / 50%;
+  position: absolute;
+  bottom: -14px;
+  left: 37px;
+}
+.test_triangle_border_2 em {
   width: 10px;
   height: 5px;
   margin: 3px;

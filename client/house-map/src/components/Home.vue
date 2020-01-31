@@ -36,6 +36,7 @@ export default {
         return (
           element.TotalPrice < 200 * 10000 &&
           element.TotalPrice > 150 * 10000 &&
+          element.ListHouseSize > 40 &&
           element.Tag.indexOf("近地铁") > -1
         );
       } else {
