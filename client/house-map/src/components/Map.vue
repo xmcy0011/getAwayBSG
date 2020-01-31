@@ -260,12 +260,14 @@ export default {
      * @param {[list]}：海量点列表
      [{
         lnglat: [116.405285, 39.904989], //点标记位置
-        name: 'beijing',
-        id:1
+        title: 'beijing1',
+        id:1,
+        style: 0
      },{
        lnglat: [116.405285, 39.904989], //点标记位置
-        name: 'beijing',
-        id:2
+        title: 'beijing2',
+        id:2,
+        style: 0
      }]
      */
     addMassMarks(list) {
@@ -285,25 +287,108 @@ export default {
         style: so // 设置样式对象
       });
 
-      let marker = new AMap.Marker({ content: " ", map: this.map });
+      //let marker = new AMap.Marker({ content: " ", map: this.map });
       let lastClickTime = new Date().valueOf();
+
+      // 创建 infoWindow 实例
+      let infoWindow = new AMap.InfoWindow();
+      let _this = this;
 
       // 将海量点添加至地图实例
       massMarks.setMap(this.map);
       //mouseover
       massMarks.on("click", function(e) {
-        marker.setPosition(e.data.lnglat);
-        marker.setLabel({ content: e.data.title });
-        lastClickTime = new Date().valueOf();
-      });
-      setInterval(() => {
-        let timeStamp = new Date().valueOf();
-        if (timeStamp - lastClickTime > 3 * 1000 && marker.getLabel() != " ") {
-          marker.setLabel({ content: " " });
-          marker.setPosition([0, 0]);
-        }
-      }, 3000);
+        // ListHouseType: "2室1厅"
+        // ListHouseSize: 73.24
+        // ListHouseWhat: "板楼"
+        // City: "sh"
+        // ListHouseFloor: "高楼层(共18层)"
+        // Tag: "["近地铁","VR房源","房本满五年"]"
+        // Title: "星颂南北卧室 一手动迁税费低 婚房精装住的少 全留"
+        // UnitPrice: 38914
+        // Link: "https://sh.lianjia.com/ershoufang/107102079791.html"
+        // ListVillageName: "曹路"
+        // ListAreaName: "星颂家园"
+        // ListHouseBorn: "2011年建"
+        // TotalPrice: 2850000
+        // ListHouseOrientations: "南"
+        // ListHouseDecorate: "精装"
+        // AreaName: "["上海房产网","上海","浦东","曹路","星颂家园","当前房源"]"
+        // BaseAttr: "["房屋户型:2室1厅1厨1卫","所在楼层:高楼层 (共18层)","建筑面积:73.24㎡","户型结构:平层","套内面积:暂无数据","建筑类型:板楼","房屋朝向:南","建筑结构:钢混结构","装修情况:精装","梯户比例:两梯四户","配备电梯:有","产权年限:70年"]"
+        // CompletedInfo: "2011年建/板楼"
+        // HouseRecordLJ: 107102079791
+        // TransactionAttr: "["交易权属:动迁安置房","上次交易:2012-10-22","房屋用途:普通住宅","房屋年限:满五年","产权所属:共有","抵押信息:无抵押","房本备件:已上传房本照片"]"
+        // FormattedAddress: "上海市浦东新区星颂家园"
+        let h = e.data.full;
 
+        // 信息窗体的内容
+        let content = ["<div style='font-size:12px;'>"];
+        content.push("标题：" + h.Title);
+        content.push("编号：" + h.HouseRecordLJ + " " + h.ListHouseBorn);
+        content.push(
+          "房型：" +
+            h.ListHouseType +
+            ", " +
+            h.ListHouseOrientations +
+            ", " +
+            h.ListHouseDecorate
+        );
+        content.push(
+          "价格：" +
+            h.ListHouseType +
+            "元(单价)" +
+            ", " +
+            h.TotalPrice +
+            "元(总价)"
+        );
+        content.push(
+          "链接：<a target='_blank' href='" + h.Link + "'>" + h.Link + "</a>"
+        );
+        content.push("区域：" + h.ListVillageName + " " + h.ListAreaName);
+        content.push("大小：" + h.ListHouseSize + " 平米," + h.ListHouseWhat);
+        content.push("楼层：" + h.ListHouseFloor);
+        content.push(
+          "标签：" +
+            h.Tag.substring(1, h.Tag.length - 2)
+              .split(",")
+              .join(" ").replace(/"/g,"")
+        );
+        content.push(
+          "地址1：<br/>" +
+            h.AreaName.substring(1, h.AreaName.length - 2)
+              .split(",")
+              .join(" ").replace(/"/g,"")
+        );
+        content.push("地址2：" + h.FormattedAddress);
+        content.push(
+          "详情：<br/>" +
+            h.BaseAttr.substring(1, h.BaseAttr.length - 2)
+              .split(",")
+              .join(" ").replace(/"/g,"")
+        );
+        content.push(
+          "其他：<br/>" +
+            h.TransactionAttr.substring(1, h.TransactionAttr.length - 2)
+              .split(",")
+              .join(" ").replace(/"/g,"")
+        );
+        content.push("</div>");
+        // 打开信息窗体
+        infoWindow.setPosition(e.data.lnglat);
+        infoWindow.setContent(content.join("<br/>"));
+        infoWindow.open(_this.map);
+
+        // marker.setPosition(e.data.lnglat);
+        // marker.setLabel({ content: htmlContent });
+        //lastClickTime = new Date().valueOf();
+      });
+      // setInterval(() => {
+      //   let timeStamp = new Date().valueOf();
+      //   if (timeStamp - lastClickTime > 3 * 1000 && marker.getLabel() != " ") {
+      //     marker.setLabel({ content: " " });
+      //     marker.setPosition([0, 0]);
+      //   }
+      // }, 3000);
       this.massMarks = massMarks;
     },
     /**
@@ -474,8 +559,8 @@ export default {
 }
 .mapStyle {
   position: absolute;
-  left: 30px;
-  bottom: 70px;
+  right: 10px;
+  top: 10px;
   background: #ffffff;
 
   border-radius: 5px;

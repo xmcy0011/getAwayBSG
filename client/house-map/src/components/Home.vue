@@ -1,6 +1,6 @@
 <template>
   <el-container id="app">
-    <el-header>
+      <Map ref="map" />
       <el-upload
         class="overButton"
         ref="uploads"
@@ -10,12 +10,8 @@
         :show-file-list="false"
         :auto-upload="false"
       >
-        <el-button slot="trigger" size="small" type="primary">加载excel</el-button>
+        <el-button slot="trigger" size="small" type="primary" icon="el-icon-upload">打开excel</el-button>
       </el-upload>
-    </el-header>
-    <el-main>
-      <Map ref="map" />
-    </el-main>
   </el-container>
 </template>
 
@@ -35,12 +31,16 @@ export default {
   },
   methods: {
     filterHouse(element) {
-      // 总价150万 - 200万
-      return (
-        element.TotalPrice < 200 * 10000 &&
-        element.TotalPrice > 150 * 10000 &&
-        element.Tag.indexOf("近地铁") > -1
-      );
+      if (element.City == "sh") {
+        // 总价150万 - 200万
+        return (
+          element.TotalPrice < 200 * 10000 &&
+          element.TotalPrice > 150 * 10000 &&
+          element.Tag.indexOf("近地铁") > -1
+        );
+      } else {
+        return element.Tag.indexOf("近地铁") > -1;
+      }
     },
     upload(file, fileList) {
       let files = { 0: file.raw };
@@ -133,6 +133,7 @@ export default {
             lnglat: [parseFloat(lon), parseFloat(lat)],
             title: element.Title + "\r\n" + element.Link,
             id: i,
+            full: element,
             style: 0
           });
         }
