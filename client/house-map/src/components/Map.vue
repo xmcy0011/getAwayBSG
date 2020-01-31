@@ -279,7 +279,12 @@ export default {
       // 创建样式对象
       let so = [
         {
-          url: "//vdata.amap.com/icons/b18/1/2.png", // 图标地址
+          url: require("../assets/wujiaoxing_red.png"), // 图标地址
+          size: new AMap.Size(11, 11), // 图标大小
+          anchor: new AMap.Pixel(5, 5) // 图标显示位置偏移量，基准点为图标左上角
+        },
+        {
+          url: require("../assets/wujiaoxing_black.png"), // 图标地址
           size: new AMap.Size(11, 11), // 图标大小
           anchor: new AMap.Pixel(5, 5) // 图标显示位置偏移量，基准点为图标左上角
         }
@@ -349,9 +354,9 @@ export default {
         content.push(
           "链接：<span id='houseLick' data='" +
             h.Link +
-            "'>" +
+            "' style='cursor:hand;color:blue;'><u>" +
             h.Link +
-            "</span>"
+            "</u></span>"
         );
         content.push("区域：" + h.ListVillageName + " " + h.ListAreaName);
         content.push("大小：" + h.ListHouseSize + " 平米," + h.ListHouseWhat);
@@ -401,6 +406,9 @@ export default {
           1000,
           e.data.Link
         );
+
+        // black
+        e.data.style = 1;
       });
       this.massMarks = massMarks;
     },
