@@ -3,6 +3,7 @@
     <div id="map-container"></div>
     <div class="mapStyle">
       <el-select
+        size="small"
         style="width:100px;"
         v-model="curMapStyle"
         placeholder="请选择"
@@ -17,6 +18,7 @@
           ></el-option>
         </el-option-group>
       </el-select>
+      <el-button size="small" @click="_onClickRangingTool" style="margin-left:5px;">测距</el-button>
     </div>
   </div>
 </template>
@@ -32,6 +34,7 @@ export default {
     return {
       map: null,
       massMarks: null, // 海量点
+      ruler: null, // 测距工具
       infoWindow: null,
       infoWindowMarker: null,
       options3: [
@@ -105,6 +108,11 @@ export default {
     AMap.plugin(["AMap.Scale"], () => {
       var scale = new AMap.Scale();
       this.map.addControl(scale);
+    });
+    //加载距离测量插件
+    let _this = this;
+    AMap.plugin(["AMap.RangingTool"], function() {
+      _this.ruler = new AMap.RangingTool(_this.map);
     });
     // 创建 infoWindow 实例
     this.infoWindow = new AMap.InfoWindow();
@@ -412,6 +420,12 @@ export default {
       });
       this.massMarks = massMarks;
     },
+    _onClickRangingTool() {
+      console.log("_onClickRangingTool");
+      if (this.ruler != null) {
+        this.ruler.turnOn();
+      }
+    },
     /**
      * 覆盖物点击，弹出信息窗口
      */
@@ -582,8 +596,6 @@ export default {
   position: absolute;
   right: 10px;
   top: 10px;
-  background: #ffffff;
-
   border-radius: 5px;
   border-color: #ebebeb;
 }
