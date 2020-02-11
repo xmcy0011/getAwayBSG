@@ -384,7 +384,7 @@ func listCrawler() {
 	}
 }
 
-func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, total int) {
+func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, total int) bool {
 	c := colly.NewCollector()
 
 	//设置延时
@@ -557,24 +557,31 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 			logger.Sugar.Infof("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
 				routineIndex, title, houseArr[i].TotalPrice, houseRecordLJ, directionInfo, decorateInfo)
 
-			db.Update(url, bson.M{
-				"DetailStatus":    1,
-				"RoomInfo":        roomInfo,
-				"FloorInfo":       floorInfo,
-				"DirectionInfo":   directionInfo,
-				"DecorateInfo":    decorateInfo,
-				"Size":            size,
-				"CompletedInfo":   completedInfo,
-				"VillageName":     villageName,
-				"AreaName":        areaName,
-				"HouseRecordLJ":   houseRecordLJ,
-				"BaseAttr":        baseAttr,
-				"TransactionAttr": transactionAttr,
-				"BeOnlineTime":    beOnlineTime.Format("2006-01-02 15:04:05"),
-				"DetailCrawlTime": time.Now().Format("2006-01-02 15:04:05")})
+			if title == "人机认证" {
+				logger.Sugar.Fatal("人机认证了，退出退出！")
+				return false
+			} else {
+				db.Update(url, bson.M{
+					"DetailStatus":    1,
+					"RoomInfo":        roomInfo,
+					"FloorInfo":       floorInfo,
+					"DirectionInfo":   directionInfo,
+					"DecorateInfo":    decorateInfo,
+					"Size":            size,
+					"CompletedInfo":   completedInfo,
+					"VillageName":     villageName,
+					"AreaName":        areaName,
+					"HouseRecordLJ":   houseRecordLJ,
+					"BaseAttr":        baseAttr,
+					"TransactionAttr": transactionAttr,
+					"BeOnlineTime":    beOnlineTime.Format("2006-01-02 15:04:05"),
+					"DetailCrawlTime": time.Now().Format("2006-01-02 15:04:05")})
+			}
 		}
 		startNum++
 	}
+
+	return true
 }
 
 func crawlerDetail() {
