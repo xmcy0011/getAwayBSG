@@ -600,8 +600,13 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 		} else {
 			// 原子操作，多线程安全
 			atomic.AddInt32(&crawlerDetailSuccessCount, 1)
-			logger.Sugar.Debugf("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
-				routineIndex, title, houseArr[i].TotalPrice, houseRecordLJ, directionInfo, decorateInfo)
+			if i%100 == 1 {
+				logger.Sugar.Infof("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
+					routineIndex, title, houseArr[i].TotalPrice, houseRecordLJ, directionInfo, decorateInfo)
+			} else {
+				logger.Sugar.Debugf("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
+					routineIndex, title, houseArr[i].TotalPrice, houseRecordLJ, directionInfo, decorateInfo)
+			}
 
 			if title == "人机认证" {
 				logger.Sugar.Errorf("人机认证了，退出退出！")
