@@ -548,7 +548,7 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 				label = element.Text
 			})
 			index := strings.Index(element.Text, label)
-			baseAttr = append(baseAttr, label+":"+element.Text[(index + len(label)):])
+			baseAttr = append(baseAttr, label+":"+element.Text[(index+len(label)):])
 		})
 	})
 
@@ -600,11 +600,11 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 		} else {
 			// 原子操作，多线程安全
 			atomic.AddInt32(&crawlerDetailSuccessCount, 1)
-			logger.Sugar.Infof("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
+			logger.Sugar.Debugf("%s[协程%d],标题:%s,价格:%d,房源编号:%s,朝向:%s,装修:%s", getDetailProgress(startNum+1, total),
 				routineIndex, title, houseArr[i].TotalPrice, houseRecordLJ, directionInfo, decorateInfo)
 
 			if title == "人机认证" {
-				logger.Sugar.Fatal("人机认证了，退出退出！")
+				logger.Sugar.Errorf("人机认证了，退出退出！")
 				return false
 			} else {
 				db.Update(url, bson.M{
@@ -630,8 +630,9 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 	return true
 }
 
-func crawlerDetail() {
-	var routineCount int = 0
+func crawlerDetail() (bool, error) {
+	var routineCount = 0
+	var robotCheckCount int32 = 0 // 检测到被人机认证的线程数
 
 	client := db.GetClient()
 	ctx := db.GetCtx()
@@ -643,13 +644,13 @@ func crawlerDetail() {
 	cur, err := dbCollection.Find(ctx, bson.M{"DetailStatus": 0})
 	if err != nil {
 		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
-		return
+		return false, err
 	}
 	var houseArr = make([]HouseInfo, 0)
 	err = cur.All(ctx, &houseArr)
 	if err != nil {
 		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
-		return
+		return false, err
 	}
 	crawlerDetailCount = len(houseArr)
 	defer cur.Close(ctx)
@@ -658,12 +659,12 @@ func crawlerDetail() {
 	logger.Sugar.Infof("[2/2] 开始抓取二手房详情,总数=%d,并行抓取协程数=%d", crawlerDetailCount, routineCount)
 
 	var wg sync.WaitGroup
-	for j := 0; j < int(routineCount); j++ {
+	for j := 0; j < routineCount; j++ {
 		perCount := crawlerDetailCount / routineCount
 		var tempHouseArr []HouseInfo
 		var startCount = j * perCount
 		var endCount int
-		if (j + 1) == int(routineCount) {
+		if (j + 1) == routineCount {
 			endCount = crawlerDetailCount
 			tempHouseArr = houseArr[startCount:crawlerDetailCount] // 除不尽的，全部交给最后一个协程
 		} else {
@@ -675,12 +676,59 @@ func crawlerDetail() {
 		go func(startNum int, routineIndex int, houseArr []HouseInfo) {
 			defer wg.Add(-1)
 			// 1协程抓取一组数据
-			crawlerOneDetail(startNum, routineIndex, tempHouseArr, crawlerDetailCount)
+			ret := crawlerOneDetail(startNum, routineIndex, tempHouseArr, crawlerDetailCount)
+			if !ret {
+				atomic.AddInt32(&robotCheckCount, 1)
+			}
 		}(j*perCount, j, tempHouseArr)
 		logger.Sugar.Infof("[2/2] 第 %d 组协程抓取 [%d-%d] 的房屋详情", j+1, startCount, endCount)
 	}
 
 	wg.Wait() // 等待所有协程完成
+
+	return robotCheckCount == 0, nil
+}
+
+// 检测人机认证
+func crawlerDetailCheckRobot() (bool, error) {
+	client := db.GetClient()
+	ctx := db.GetCtx()
+
+	odb := client.Database(configs.ConfigInfo.DbDatabase)
+	dbCollection := odb.Collection(configs.ConfigInfo.TwoHandHouseCollection)
+
+	cur := dbCollection.FindOne(ctx, bson.M{"DetailStatus": 0})
+	if err := cur.Err(); err != nil {
+		logger.Sugar.Fatalf("数据库读取失败:", err)
+		return false, cur.Err()
+	}
+
+	h := HouseInfo{}
+	if err := cur.Decode(&h); err != nil {
+		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
+		return false, err
+	}
+
+	c := colly.NewCollector()
+
+	//随机UA
+	extensions.RandomUserAgent(c)
+	//自动referer
+	extensions.Referer(c)
+
+	var title string // 标题
+	// 标题
+	c.OnHTML("title", func(element *colly.HTMLElement) {
+		title = element.Text
+	})
+
+	err := c.Visit(h.Link)
+	if err != nil {
+		logger.Sugar.Fatalf("http访问失败,url=%s,error:%s", h.Link, err.Error())
+		return false, err
+	}
+
+	return title != "人机认证", nil
 }
 
 func pingMongoDb() error {
@@ -725,7 +773,38 @@ func StartLJSecondHandHouse(crawlerList bool) {
 	// 抓详情
 	logger.Sugar.Info("[2/2] 开始抓取城市二手房详细信息")
 	time.Sleep(time.Second * 3)
-	crawlerDetail()
+	for {
+		ret, err := crawlerDetail()
+		if err != nil {
+			break
+		}
+
+		if ret {
+			break
+		}
+
+		var sleepInterval = 1
+		var maxSleepInterval = 10 * 60 // 10 min
+		for {
+			ret, err = crawlerDetailCheckRobot()
+			if err != nil {
+				logger.Sugar.Errorf("人机检测失败，即将退出...")
+				return
+			}
+			if ret {
+				logger.Sugar.Infof("人机检测成功，当前状态：放行，3秒后继续抓取详情任务...")
+				time.Sleep(time.Second * 3)
+				break
+			} else {
+				sleepInterval *= 2 // 2 4 8 16 ...
+				if sleepInterval >= maxSleepInterval {
+					sleepInterval = maxSleepInterval
+				}
+				logger.Sugar.Infof("人机检测成功，当前状态：屏蔽，休眠 %d 秒后重试...", sleepInterval)
+				time.Sleep(time.Second * time.Duration(sleepInterval))
+			}
+		}
+	}
 	if crawlerDetailSuccessCount == 0 {
 		logger.Sugar.Error("[2/2] 抓取详情失败,没有数据，结束二手房抓取!")
 	} else {
