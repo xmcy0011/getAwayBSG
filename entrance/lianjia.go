@@ -90,8 +90,7 @@ func getListProgress(cityIndex int, cityCount int, curArea, totalArea int, curCo
 }
 func getDetailProgress(curCount int, totalCount int) string {
 	percent := int(crawlerDetailSuccessCount) * 100 / crawlerDetailCount
-	percentStr := strconv.Itoa(percent) + "%"
-	return fmt.Sprintf("[2/2][%s%s][%d/%d 成功/总数]", percentStr, "%", crawlerDetailSuccessCount, crawlerDetailCount)
+	return fmt.Sprintf("[2/2][%d%s][%d/%d 成功/总数]", percent, "%", crawlerDetailSuccessCount, crawlerDetailCount)
 }
 
 func decimal(value float64) float64 {
