@@ -657,6 +657,7 @@ func crawlerDetail() (bool, error) {
 		return false, err
 	}
 	crawlerDetailCount = len(houseArr)
+	crawlerDetailSuccessCount = 0
 	defer cur.Close(ctx)
 
 	routineCount = configs.ConfigInfo.CrawlDetailRoutineNum
