@@ -1,9 +1,9 @@
 package entrance
 
 import (
-	"github.com/getAwayBSG/pkg/configs"
-	"github.com/getAwayBSG/pkg/db"
-	"github.com/getAwayBSG/pkg/logger"
+	"getAwayBSG/pkg/configs"
+	"getAwayBSG/pkg/db"
+	"getAwayBSG/pkg/logger"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
 	"github.com/gocolly/colly/proxy"

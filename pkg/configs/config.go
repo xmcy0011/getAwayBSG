@@ -1,7 +1,7 @@
 package configs
 
 import (
-	"github.com/getAwayBSG/pkg/logger"
+	"getAwayBSG/pkg/logger"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 )

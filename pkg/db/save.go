@@ -1,8 +1,8 @@
 package db
 
 import (
-	"github.com/getAwayBSG/pkg/configs"
-	"github.com/getAwayBSG/pkg/logger"
+	"getAwayBSG/pkg/configs"
+	"getAwayBSG/pkg/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"strconv"
 	"strings"

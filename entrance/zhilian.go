@@ -3,9 +3,9 @@ package entrance
 import (
 	"crypto/tls"
 	"encoding/json"
-	"github.com/getAwayBSG/pkg/configs"
-	"github.com/getAwayBSG/pkg/db"
-	"github.com/getAwayBSG/pkg/logger"
+	"getAwayBSG/pkg/configs"
+	"getAwayBSG/pkg/db"
+	"getAwayBSG/pkg/logger"
 	"io/ioutil"
 	"math/rand"
 	"net/http"

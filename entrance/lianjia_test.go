@@ -1,7 +1,7 @@
 package entrance
 
 import (
-	"github.com/getAwayBSG/pkg/logger"
+	"getAwayBSG/pkg/logger"
 	"testing"
 )
 

@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/getAwayBSG/pkg/logger"
+	"getAwayBSG/pkg/logger"
 	"io/ioutil"
 	"net/http"
 	"os"

@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/getAwayBSG/entrance"
-	"github.com/getAwayBSG/pkg/configs"
-	"github.com/getAwayBSG/pkg/logger"
+	"getAwayBSG/entrance"
+	"getAwayBSG/pkg/configs"
+	"getAwayBSG/pkg/logger"
 	"github.com/getwe/figlet4go"
 )
 
