@@ -1,8 +1,9 @@
-package entrance
+package internel
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"getAwayBSG/pkg/configs"
 	"getAwayBSG/pkg/db"
@@ -106,6 +107,7 @@ func getSecondAreas(areaUrl string) ([]AreaInfo, int, error) {
 
 	arr := make([]AreaInfo, 0)
 	totalAreaCount := 0 // 某个区域下的总房源套数
+	title := ""
 
 	// 绑定
 	c.OnHTML("body", func(element *colly.HTMLElement) {
@@ -139,12 +141,20 @@ func getSecondAreas(areaUrl string) ([]AreaInfo, int, error) {
 				totalAreaCount = count
 			}
 		})
+
+		// 标题
+		c.OnHTML("title", func(element *colly.HTMLElement) {
+			title = element.Text
+		})
 	})
 
 	err := c.Visit(areaUrl)
 	if err != nil {
 		logger.Sugar.Error(err)
 		return nil, totalAreaCount, err
+	}
+	if title == "人机认证" {
+		return nil, 0, errors.New("人机认证")
 	}
 	return arr, totalAreaCount, nil
 }
@@ -349,7 +359,7 @@ func listCrawlerOneArea(cityIndex, cityCount int, areaIndex, totalArea int, area
 
 	childAreas, totalCount, err := getSecondAreas(areaInfo.Url)
 	if err != nil {
-		logger.Sugar.Error(err)
+		logger.Sugar.Error("城市=%s,区域=%s,获取子区域列表失败：", cityName, areaInfo.Name, err.Error())
 		return
 	}
 	logger.Sugar.Infof("城市=%s,区域=%s,开始抓取该区域下所有子区域房源,count=%d", cityName, areaInfo.Name, len(childAreas))
