@@ -1,4 +1,4 @@
-package entrance
+package internel
 
 import (
 	"context"

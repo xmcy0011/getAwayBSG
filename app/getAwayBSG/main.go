@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/fatih/color"
 	"getAwayBSG/entrance"
+	"getAwayBSG/internel"
 	"getAwayBSG/pkg/configs"
 	"getAwayBSG/pkg/logger"
+	"github.com/fatih/color"
 	"github.com/getwe/figlet4go"
 )
 
@@ -46,13 +47,13 @@ func main() {
 
 	//进入不同入口
 	if lianjiaErshou {
-		entrance.CleanVisit()
+		internel.CleanVisit()
 		logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
-		entrance.StartLJSecondHandHouse(true)
+		internel.StartLJSecondHandHouse(true)
 	} else if lianjiaZufang {
-		entrance.Start_LianjiaZufang()
+		//internel.Start_LianjiaZufang()
 	} else if zhilian {
-		entrance.Start_zhilian()
+		//internel.Start_zhilian()
 	} else {
 		fmt.Println("每次抓取都是全量的!")
 		flag.Usage()
@@ -79,18 +80,18 @@ func choice() {
 		_, err := fmt.Scanln(&choice)
 		if err == nil {
 			if choice == 1 {
-				entrance.CleanVisit()
+				internel.CleanVisit()
 				logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
-				entrance.StartLJSecondHandHouse(true)
+				internel.StartLJSecondHandHouse(true)
 				break
 			} else if choice == 2 {
-				entrance.CleanVisit()
+				internel.CleanVisit()
 				logger.Sugar.Infof("抓取链家二手房数据,存储tableName=%s", configs.ConfigInfo.DbDatabase)
-				entrance.StartLJSecondHandHouse(false)
+				internel.StartLJSecondHandHouse(false)
 				break
 			} else if choice == 3 {
 				logger.Sugar.Infof("链家二手房数据补充经纬度信息,房源tableName=%s", configs.ConfigInfo.DbDatabase)
-				entrance.StartGeocodeLJ()
+				internel.StartGeocodeLJ()
 				break
 			} else {
 				logger.Sugar.Info("选择错误！")
