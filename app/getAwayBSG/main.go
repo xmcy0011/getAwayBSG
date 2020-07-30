@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"getAwayBSG/entrance"
 	"getAwayBSG/internel"
 	"getAwayBSG/pkg/configs"
 	"getAwayBSG/pkg/logger"
