@@ -53,70 +53,70 @@ export default {
           options: [
             {
               value: "normal",
-              label: "标准"
+              label: "标准",
             },
             {
               value: "dark",
-              label: "幻影黑"
-            }
-          ]
+              label: "幻影黑",
+            },
+          ],
         },
         {
           label: "自定义",
           options: [
             {
               value: "macaron",
-              label: "马卡龙"
+              label: "马卡龙",
             },
             {
               value: "graffiti",
-              label: "涂鸦"
+              label: "涂鸦",
             },
             {
               value: "fresh",
-              label: "草色青"
+              label: "草色青",
             },
             {
               value: "blue",
-              label: "靛青蓝"
+              label: "靛青蓝",
             },
             {
               value: "whitesmoke",
-              label: "远山黛"
+              label: "远山黛",
             },
             {
               value: "darkblue",
-              label: "极夜蓝"
+              label: "极夜蓝",
             },
             {
               value: "light",
-              label: "月光银"
+              label: "月光银",
             },
             {
               value: "grey",
-              label: "雅士灰"
-            }
-          ]
-        }
+              label: "雅士灰",
+            },
+          ],
+        },
       ],
       curMapStyle: "normal",
       curHouseMarker: null, // 当前激活的房源
       itCompanyAreaList: [], // 上海科技园,
       itCompanyList: [], // 上海It公司
       itAreaChecked: true,
-      itCompanyChecked: true
+      itCompanyChecked: true,
     };
   },
   mounted() {
     this.map = new AMap.Map("map-container", {
       mapStyle: "amap://styles/normal",
       zoom: 15,
-      center: [121.480331, 31.153403]
+      center: [121.480331, 31.153403],
     });
     AMap.plugin("AMap.ToolBar", () => {
       // 异步加载插件
       let toolbar = new AMap.ToolBar({
-        position: "RB"
+        position: "RB",
       });
       this.map.addControl(toolbar);
     });
@@ -126,12 +126,24 @@ export default {
     });
     //加载距离测量插件
     let _this = this;
-    AMap.plugin(["AMap.RangingTool"], function() {
+    AMap.plugin(["AMap.RangingTool"], function () {
       _this.ruler = new AMap.RangingTool(_this.map);
     });
-    // 加载著名上海科技园
-    this._loadItArea();
-    this._loadItCompany();
+
+    document.onkeydown = function (event) {
+      var e = event || window.event || arguments.callee.caller.arguments[0];
+      if (e && e.keyCode == 37) {
+        console.log("key 37 press");
+      } else if (e && e.keyCode == 38) {
+        console.log("key 38 press");
+      }
+    };
+
+    setTimeout(() => {
+      // 加载著名上海科技园
+      this._loadItArea();
+      this._loadItCompany();
+    }, 1 * 1000);
   },
   methods: {
     // 使用默认浏览器打开
@@ -160,21 +172,21 @@ export default {
         {
           url: require("../assets/wujiaoxing_red.png"), // 图标地址
           size: new AMap.Size(11, 11), // 图标大小
-          anchor: new AMap.Pixel(5, 5) // 图标显示位置偏移量，基准点为图标左上角
+          anchor: new AMap.Pixel(5, 5), // 图标显示位置偏移量，基准点为图标左上角
         },
         {
           url: require("../assets/wujiaoxing_black.png"), // 图标地址
           size: new AMap.Size(11, 11), // 图标大小
-          anchor: new AMap.Pixel(5, 5) // 图标显示位置偏移量，基准点为图标左上角
+          anchor: new AMap.Pixel(5, 5), // 图标显示位置偏移量，基准点为图标左上角
         },
         {
           url: require("../assets/wujiaoxing_yellow.png"), // 图标地址
           size: new AMap.Size(11, 11), // 图标大小
-          anchor: new AMap.Pixel(5, 5) // 图标显示位置偏移量，基准点为图标左上角
-        }
+          anchor: new AMap.Pixel(5, 5), // 图标显示位置偏移量，基准点为图标左上角
+        },
       ];
 
-      list.forEach(item => {
+      list.forEach((item) => {
         // 收藏，则标记
         let type = _this._checkHouseIsCollect(item.full.HouseRecordLJ);
         if (type == 1) {
@@ -190,7 +202,7 @@ export default {
         zIndex: 111, // 海量点图层叠加的顺序
         cursor: "pointer",
         zooms: [3, 19], // 在指定地图缩放级别范围内展示海量点图层
-        style: so // 设置样式对象
+        style: so, // 设置样式对象
       });
 
       //let marker = new AMap.Marker({ content: " ", map: this.map });
@@ -202,7 +214,7 @@ export default {
       // 将海量点添加至地图实例
       massMarks.setMap(this.map);
       //mouseover
-      massMarks.on("click", function(e) {
+      massMarks.on("click", function (e) {
         // ListHouseType: "2室1厅"
         // ListHouseSize: 73.24
         // ListHouseWhat: "板楼"
@@ -299,16 +311,16 @@ export default {
         infoWindow.setContent(content.join("<br/>"));
         infoWindow.open(_this.map);
         setTimeout(
-          link => {
+          (link) => {
             let span = document.getElementById("houseLick");
-            span.onclick = function() {
+            span.onclick = function () {
               console.log("span click" + this.getAttribute("data"));
               _this.openUrl(this.getAttribute("data"));
             };
 
             let btnLike = document.getElementById("btnCollect");
             if (btnLike != null) {
-              btnLike.onclick = function() {
+              btnLike.onclick = function () {
                 console.log("like:" + this.getAttribute("houseId"));
                 _this._saveOrUpdateHouse(this.getAttribute("houseId"), 1);
                 _this.curHouseMarker.data.style = 2;
@@ -316,7 +328,7 @@ export default {
             }
             let btnDislike = document.getElementById("btnDisCollect");
             if (btnDislike != null) {
-              btnDislike.onclick = function() {
+              btnDislike.onclick = function () {
                 console.log("dislike:" + this.getAttribute("houseId"));
                 _this._saveOrUpdateHouse(this.getAttribute("houseId"), 2);
                 _this.curHouseMarker.data.style = 1;
@@ -349,7 +361,7 @@ export default {
         store.delete("house_" + hourseId);
       }
     },
-    //是否收藏
+    // 是否收藏
     _checkHouseIsCollect(hourseId) {
       const store = new Store();
       return store.get("house_" + hourseId);
@@ -373,7 +385,7 @@ export default {
       // 121.45126,31.02279 闵行区紫竹科学园区
       let _this = this;
       // clear
-      this.itCompanyAreaList.forEach(element => {
+      this.itCompanyAreaList.forEach((element) => {
         _this.map.remove(element);
       });
       this.itCompanyAreaList.slice(0, this.itCompanyAreaList.length); // clear
@@ -392,7 +404,7 @@ export default {
         fillColor: "gray", // 圆形填充颜色
         fillOpacity: 0.2,
         strokeColor: "#fff", // 描边颜色
-        strokeWeight: 2 // 描边宽度
+        strokeWeight: 2, // 描边宽度
       });
       // 创建一个 Marker 实例：
       // let marker = new AMap.Text({
@@ -409,7 +421,7 @@ export default {
         content: content, // 自定义点标记覆盖物内容
         position: [lon, lat],
         title: title,
-        offset: new AMap.Pixel(-75, -72)
+        offset: new AMap.Pixel(-75, -72),
       });
 
       this.itCompanyAreaList.push(marker);
@@ -422,7 +434,7 @@ export default {
     // 加载，上海著名互联网公司
     _loadItCompany(add) {
       let _this = this;
-      this.itCompanyList.forEach(element => {
+      this.itCompanyList.forEach((element) => {
         _this.map.remove(element);
       });
       this.itCompanyList.slice(0, this.itCompanyList.length); // clear
@@ -467,6 +479,8 @@ export default {
         this._addCompany(121.463089, 31.02068, "Intel");
         this._addCompany(121.409258, 31.171887, "微软");
         this._addCompany(121.519372, 31.077439, "万达股份");
+        this._addCompany(121.39253, 31.170216, "莉莉丝");
+        this._addCompany(121.399854, 31.168252, "商汤");
       }
     },
     _addCompany(lon, lat, title) {
@@ -480,14 +494,14 @@ export default {
         content: content, // 自定义点标记覆盖物内容
         position: [lon, lat],
         title: title,
-        offset: new AMap.Pixel(-75, -72)
+        offset: new AMap.Pixel(-75, -72),
       });
 
       this.itCompanyAreaList.push(marker);
       // 将创建的点标记添加到已有的地图实例：
       this.map.add(marker);
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -509,21 +523,21 @@ export default {
 }
 /*自定义图标样式*/
 .test_triangle_border .popup {
-  width: 60px;
+  width: 50px;
   background: #027cf6;
-  padding: 5px 5px 7px 5px;
+  padding: 1px 1px 2px 1px;
   color: #ffffff;
   text-align: center;
   border-radius: 4px;
   position: absolute;
-  font-size: 12px;
+  font-size: 10px;
   top: 30px;
   left: 30px;
 }
 .test_triangle_border_2 .popup {
-  width: 60px;
+  width: 50px;
   background: #ff9966;
-  padding: 4px 4px 6px 4px;
+  padding: 1px 1px 2px 1px;
   color: #ffffff;
   text-align: center;
   border-radius: 4px;
@@ -531,7 +545,7 @@ export default {
   border-width: 1px 1px 0;
   border-style: solid;
   position: absolute;
-  font-size: 12px;
+  font-size: 10px;
   top: 30px;
   left: 30px;
 }
@@ -540,22 +554,22 @@ export default {
   display: block;
   width: 0;
   height: 0;
-  border-width: 8px 8px 0;
+  border-width: 6px 6px 0;
   border-style: solid;
   border-color: #027cf6 transparent transparent; /*黄 透明 透明 */
   position: absolute;
-  bottom: -8px;
+  bottom: -6px;
   left: 37px;
 }
 .test_triangle_border_2 span {
   display: block;
   width: 0;
   height: 0;
-  border-width: 8px 8px 0;
+  border-width: 6px 6px 0;
   border-style: solid;
   border-color: #ff9966 transparent transparent; /*黄 透明 透明 */
   position: absolute;
-  bottom: -8px;
+  bottom: -6px;
   left: 37px;
 }
 /*小阴影*/
