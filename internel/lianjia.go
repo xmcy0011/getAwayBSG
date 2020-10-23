@@ -600,8 +600,8 @@ func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, tota
 
 	for i := range houseArr {
 		// sleep 100ms - 1s
-		ts := time.Duration(rand.Int()/900 + 100)
-		time.Sleep(time.Millisecond * ts)
+		ts := rand.Int()/900 + 100
+		time.Sleep(time.Millisecond * time.Duration(ts))
 		baseAttr = make([]string, 0)
 		transactionAttr = make([]string, 0)
 		url := houseArr[i].Link
