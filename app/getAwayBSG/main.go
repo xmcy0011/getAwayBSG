@@ -8,6 +8,8 @@ import (
 	"getAwayBSG/pkg/logger"
 	"github.com/fatih/color"
 	"github.com/getwe/figlet4go"
+	"math/rand"
+	"time"
 )
 
 // 申明配置变量
@@ -34,6 +36,9 @@ func main() {
 	logger.InitLogger("log/log.log", "debug")
 	defer logger.Logger.Sync()
 	printIcon()
+
+	// 随机数种子
+	rand.Seed(time.Now().Unix())
 
 	flag.Parse()
 	//初始化配置信息，同时输出配置信息

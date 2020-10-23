@@ -385,10 +385,15 @@ db.lianjia_2.find({
 
 1.mongodb导出excel
 ```shell
-mongoexport -d crawler -c lianjia_2_sh -f _id,ListCrawlTime,ListHouseType,ListHouseSize,ListHouseWhat,City,ListHouseFloor,Tag,Title,UnitPrice,Link,ListVillageName,ListAreaName,ListHouseBorn,TotalPrice,ListHouseOrientations,ListHouseDecorate,AreaName,BaseAttr,BeOnlineTime,CompletedInfo,DecorateInfo,DetailCrawlTime,DirectionInfo,FloorInfo,HouseRecordLJ,RoomInfo,Size,TransactionAttr,VillageName,FormattedAddress,Location --csv -o ./lianjia.csv
+mongoexport -d crawler -c lianjia_sh_20200911 -f ListCrawlTime,ListHouseType,ListHouseSize,ListHouseWhat,City,ListHouseFloor,Tag,Title,UnitPrice,Link,ListVillageName,ListAreaName,ListHouseBorn,TotalPrice,ListHouseOrientations,ListHouseDecorate,AreaName,BaseAttr,BeOnlineTime,CompletedInfo,DecorateInfo,DetailCrawlTime,DirectionInfo,FloorInfo,HouseRecordLJ,RoomInfo,Size,TransactionAttr,VillageName,FormattedAddress,Location --type=csv -o ./lianjia_sh_20200911.csv
 ```
 
 2.数据分析软件推荐：Tableau
+
+3.下载
+```shell
+scp -P 51219 root@106.14.172.35:/data/getAwayBSG/bin/data/lianjia_sh_20200729.csv .
+```
 
 ## Contact
 
