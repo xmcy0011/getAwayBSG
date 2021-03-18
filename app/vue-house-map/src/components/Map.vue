@@ -35,8 +35,8 @@
 <script>
 // @ is an alias to /src
 import AMap from "AMap";
-const shellEle = require("electron").shell; // electron shell
-const Store = require("electron-store"); // electron storage
+//const shellEle = require("electron").shell; // electron shell
+//const Store = require("electron-store");    // electron storage
 
 export default {
   name: "home",
@@ -148,7 +148,7 @@ export default {
   methods: {
     // 使用默认浏览器打开
     openUrl(link) {
-      shellEle.openExternal(link);
+      //shellEle.openExternal(link);
     },
     /**
      * 添加一个覆盖物
@@ -353,18 +353,19 @@ export default {
     },
     // 收藏 collectType:0,delete,1:like,2:dislike
     _saveOrUpdateHouse(hourseId, collectType) {
-      if (collectType == 1 || collectType == 2) {
-        const store = new Store();
-        store.set("house_" + hourseId, collectType);
-        console.log(store.get("house_" + hourseId));
-      } else {
-        store.delete("house_" + hourseId);
-      }
+      // if (collectType == 1 || collectType == 2) {
+      //   const store = new Store();
+      //   store.set("house_" + hourseId, collectType);
+      //   console.log(store.get("house_" + hourseId));
+      // } else {
+      //   store.delete("house_" + hourseId);
+      // }
     },
     // 是否收藏
     _checkHouseIsCollect(hourseId) {
-      const store = new Store();
-      return store.get("house_" + hourseId);
+      //const store = new Store();
+      //return store.get("house_" + hourseId);
+      return false;
     },
     // 测距
     _onClickRangingTool() {
