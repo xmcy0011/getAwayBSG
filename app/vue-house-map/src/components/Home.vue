@@ -10,47 +10,70 @@
       :show-file-list="false"
       :auto-upload="false"
     >
-      <el-button slot="trigger" size="small" type="primary" icon="el-icon-upload">打开excel</el-button>
+      <el-button
+        slot="trigger"
+        size="small"
+        type="primary"
+        icon="el-icon-upload"
+        >打开excel</el-button
+      >
     </el-upload>
 
-    <el-button size="small" type="primary" class="overButton2" @click="dialogFormVisible = true">筛选</el-button>
+    <el-button
+      size="small"
+      type="primary"
+      class="overButton2"
+      @click="dialogFormVisible = true"
+      >筛选</el-button
+    >
 
-    <el-dialog title="筛选" :visible.sync="dialogFormVisible" style="width:1200px;">
+    <el-dialog title="筛选" v-model="dialogFormVisible" width="600px">
       <el-form :model="form">
         <el-form-item label="售价" :label-width="formLabelWidth">
-          <el-radio-group class="leftRadio" v-model="form.radioPrice">
-            <el-radio :label="0">全部</el-radio>
-            <el-radio :label="1">200万以下</el-radio>
-            <el-radio :label="2">200-250万</el-radio>
-            <el-radio :label="3">250万以上</el-radio>
+          <el-radio-group class="leftRadio" v-model="form.radioPriceSelected">
+            <el-radio
+              v-for="arr in form.radioPriceArr"
+              :label="arr.value"
+              :key="arr.value"
+            >
+              {{ arr.label }}
+            </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="房型" :label-width="formLabelWidth">
-          <el-radio-group class="leftRadio" v-model="form.houseType">
-            <el-radio :label="0">全部</el-radio>
-            <el-radio :label="1">一室</el-radio>
-            <el-radio :label="2">二室</el-radio>
-            <el-radio :label="3">三室</el-radio>
-            <el-radio :label="4">四室及以上</el-radio>
+          <el-radio-group class="leftRadio" v-model="form.houseTypeSelected">
+            <el-radio
+              v-for="arr in form.houseTypeArr"
+              :label="arr.value"
+              :key="arr.value"
+            >
+              {{ arr.label }}
+            </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="面积" :label-width="formLabelWidth">
-          <el-radio-group class="leftRadio" v-model="form.houseSize">
-            <el-radio :label="0">全部</el-radio>
-            <el-radio :label="1">40㎡以下</el-radio>
-            <el-radio :label="2">40-60㎡</el-radio>
-            <el-radio :label="3">60-90㎡</el-radio>
-            <el-radio :label="4">90㎡以上</el-radio>
+          <el-radio-group class="leftRadio" v-model="form.houseSizeSelected">
+            <el-radio
+              v-for="arr in form.houseSizeArr"
+              :label="arr.value"
+              :key="arr.value"
+            >
+              {{ arr.label }}
+            </el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogFormVisible = false">取 消</el-button>
-        <el-button type="primary" @click="onSearch">确 定</el-button>
-      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogFormVisible = false">取 消</el-button>
+          <el-button type="primary" @click="onSearch">确 定</el-button>
+        </span>
+      </template>
     </el-dialog>
 
-    <p id="searchValue" style="position:absolute;left:190px;">价格：全部，房型：全部，大小：全部</p>
+    <p id="searchValue" style="position: absolute; left: 190px">
+      {{ searchText }}
+    </p>
   </el-container>
 </template>
 
@@ -70,10 +93,32 @@ export default {
       formLabelWidth: "50",
       maxLimitShowCount: 10 * 1000, // 10K
       form: {
-        radioPrice: 0, // 200万以下
-        houseType: 0, // 1室
-        houseSize: 2, // 40平米以下
+        radioPriceSelected: -1, // 200万以下
+        radioPriceArr: [
+          { value: "0", label: "全部" },
+          { value: "1", label: "200万以下" },
+          { value: "2", label: "200-250万" },
+          { value: "3", label: "250万以上" },
+        ],
+        houseTypeSelected: -1, // 1室
+        houseTypeArr: [
+          { value: "0", label: "全部" },
+          { value: "1", label: "一室" },
+          { value: "2", label: "二室" },
+          { value: "3", label: "三室" },
+          { value: "4", label: "四室及以上" },
+        ],
+        houseSizeSelected: -1, // 40平米以下
+        houseSizeArr: [
+          { value: "0", label: "全部" },
+          { value: "1", label: "40㎡以下" },
+          { value: "2", label: "40-60㎡" },
+          { value: "3", label: "60-90㎡" },
+          { value: "4", label: "90㎡以上" },
+        ],
       },
+
+      searchText: "无",
     };
   },
   methods: {
@@ -240,6 +285,16 @@ export default {
     },
     onSearch() {
       this.dialogFormVisible = false;
+
+      //"价格：全部，房型：全部，大小：全部",
+      const f = this.form;
+      this.searchText =
+        "价格：" +
+        f.radioPriceArr[f.radioPriceSelected].label +
+        "，房型：" +
+        f.houseTypeArr[f.houseTypeSelected].label +
+        "，大小：" +
+        f.houseSizeArr[f.houseSizeSelected].label;
       var _this = this;
       setTimeout(() => {
         _this.loadToMap(_this.houseList);
