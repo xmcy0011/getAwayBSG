@@ -31,6 +31,8 @@ $ cnpm install element-plus --save # install element-ui-3.x
 
 5. electron
 ```
+$ 
+$ yarn add vue-cli-plugin-electron-builder -D --tilde
 ```
 
 ## build
