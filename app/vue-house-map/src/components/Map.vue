@@ -66,7 +66,9 @@
             placeholder="请输入出发地"
             style="width: 400px; margin-left: 10px"
           ></el-input>
-          <el-button style="margin-left: 10px">确定</el-button>
+          <el-button style="margin-left: 10px" @click="_onClickTimeQuery"
+            >确定</el-button
+          >
         </el-row>
 
         <el-card
@@ -77,18 +79,18 @@
           :key="o"
         >
           <template #header>
-            <div class="card-header" style="height:15px;">
+            <div class="card-header" style="height: 15px">
               <span>{{ o.name }}</span>
             </div>
           </template>
-          <el-row style="margin-top:-20px;">
+          <el-row style="margin-top: -20px">
             <el-col :span="12">
               <p>公交</p>
-              <strong>1小时1分钟</strong>
+              <strong :name="o.id">1小时1分钟</strong>
             </el-col>
             <el-col :span="12">
               <p>驾车</p>
-              <strong>54分钟</strong>
+              <strong :name="o.id">54分钟</strong>
             </el-col>
           </el-row>
         </el-card>
@@ -113,21 +115,25 @@ export default {
       drawer: false, // 通勤时间工具
       destination: [
         {
+          id: "1",
           name: "哔哩哔哩",
           lng: 121.506414,
           lat: 31.309352,
         },
         {
+          id: "2",
           name: "拼多多",
           lng: 121.425928,
           lat: 31.219444,
         },
         {
+          id: "3",
           name: "万达股份",
           lng: 121.519372,
           lat: 31.077439,
         },
         {
+          id: "4",
           name: "莉莉丝",
           lng: 121.39253,
           lat: 31.170216,
@@ -465,6 +471,10 @@ export default {
     // 通勤
     _onClickTimeQueryTool() {
       this.drawer = true;
+    },
+    // 通勤时间查询
+    _onClickTimeQuery() {
+      let _this = this;
     },
     // 通勤时间面板关闭
     drawerClose() {
