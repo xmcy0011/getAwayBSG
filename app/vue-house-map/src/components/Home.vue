@@ -1,6 +1,8 @@
 <template>
   <el-container id="app">
     <Map ref="map" />
+    <Direction ref="directionPanel" />
+
     <el-upload
       class="overButton"
       ref="uploads"
@@ -10,11 +12,7 @@
       :show-file-list="false"
       :auto-upload="false"
     >
-      <el-button
-        slot="trigger"
-        size="small"
-        type="primary"
-        icon="el-icon-upload"
+      <el-button size="small" type="primary" icon="el-icon-upload"
         >打开excel</el-button
       >
     </el-upload>
@@ -25,6 +23,10 @@
       class="overButton2"
       @click="dialogFormVisible = true"
       >筛选</el-button
+    >
+
+    <el-button size="small" class="overButton3" @click="onClickDirection"
+      >通勤</el-button
     >
 
     <el-dialog title="筛选" v-model="dialogFormVisible" width="600px">
@@ -79,12 +81,15 @@
 
 <script>
 import Map from "./Map.vue";
+import PoiSearchBox from "./PoiSearchBox.vue";
+import Direction from "./Direction.vue";
 import XLSX from "xlsx";
 
 export default {
   name: "home",
   components: {
     Map,
+    Direction,
   },
   data() {
     return {
@@ -283,6 +288,10 @@ export default {
       //resolve();
       //});
     },
+    // 打开通勤面板
+    onClickDirection() {
+      this.$refs.directionPanel.drawer = true;
+    },
     onSearch() {
       this.dialogFormVisible = false;
 
@@ -330,6 +339,11 @@ export default {
   top: 10px;
   left: 120px;
 }
+.overButton3 {
+  position: absolute;
+  top: 10px;
+  right: 180px;
+}
 .searchBox {
   width: 600px;
   height: auto;
@@ -352,5 +366,11 @@ export default {
   color: #2c3e50;
   width: 100%;
   height: 100%;
+}
+.searchPoiBox {
+  position: absolute;
+  width: 300px;
+  top: 50px;
+  right: 10px;
 }
 </style>

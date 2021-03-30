@@ -1,9 +1,8 @@
 <template>
   <div>
-    <el-button size="small" @click="this.drawer = true" style="margin-left: 5px"
+    <!-- <el-button size="small" @click="this.drawer = true" style="margin-left: 5px"
       >通勤</el-button
-    >
-
+    > -->
     <el-drawer
       title="通勤时间测算"
       v-model="drawer"
@@ -14,6 +13,7 @@
     >
       <PoiSearchBox
         ref="poiSearchBox"
+        v-show="drawer"
         @clickSearch="clickSearch"
         style="margin-left: 10px; margin-right: 10px"
       />
@@ -33,11 +33,11 @@
         <el-row style="margin-top: -20px">
           <el-col :span="12">
             <p>公交</p>
-            <strong :name="o.id">无</strong>
+            <p :name="o.id">无</p>
           </el-col>
           <el-col :span="12">
             <p>驾车</p>
-            <strong :name="o.id">无</strong>
+            <p :name="o.id">无</p>
           </el-col>
         </el-row>
       </el-card>
@@ -155,3 +155,9 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.card-header {
+  font-weight: bold;
+}
+</style>
