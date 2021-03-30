@@ -47,7 +47,7 @@
 
 <script>
 import PoiSearchBox from "./PoiSearchBox.vue";
-import { geo, getTransit } from "../api/api.js";
+import { geo, getTransitIntegrated, getTransitDriving } from "../api/api.js";
 
 export default {
   components: {
@@ -103,24 +103,29 @@ export default {
       let location = await geo(originAddress);
       console.log("addr=" + originAddress + ",location=" + location);
 
+      const getTimeText = function (timeSpan) {
+        let hour = parseInt(timeSpan / 60 / 60);
+
+        let min = parseInt(timeSpan / 60) % 60;
+        let text = min + "分钟";
+        if (hour > 0) {
+          text = hour + "小时" + text;
+        }
+
+        return text;
+      };
+
       for (let i = 0; i < this.destination.length; i++) {
         let dest = this.destination[i].location;
-        // 公交
-        let results = await getTransit(location, dest, 0);
+        // 公交查询
+        let results = await getTransitIntegrated(location, dest, 0);
         if (results.length > 0) {
-          let duration = results[0].duration;
           // results[0] 代表最快的方案
-          let hour = parseInt(duration / 60 / 60);
-
-          let min = parseInt(duration / 60) % 60;
-          let text = min + "分钟";
-          console.log(duration + " " + hour + " " + min);
-          if (hour > 0) {
-            text = hour + "小时" + text;
-          }
+          let duration = results[0].duration;
+          let text = getTimeText(duration);
 
           let kmeters = (results[0].walking_distance / 1000).toFixed(2);
-          text += "，步行：" + kmeters + "千米";
+          text += " 步行：" + kmeters + "千米";
 
           var elementArr = document.getElementsByName("dest" + i);
           console.log("dest" + i + ",element.length=" + elementArr.length);
@@ -130,6 +135,21 @@ export default {
         }
 
         // 驾车
+        results = await getTransitDriving(location, dest, 0);
+        if (results.length > 0) {
+          // results[0] 代表最快的方案
+          let duration = results[0].duration;
+          let text = getTimeText(duration);
+
+          let kmeters = (results[0].distance / 1000).toFixed(2);
+          text += " " + kmeters + "千米";
+
+          var elementArr = document.getElementsByName("dest" + i);
+          console.log("dest" + i + ",element.length=" + elementArr.length);
+          if (elementArr.length > 0) {
+            elementArr[1].innerText = text;
+          }
+        }
       }
     },
   },
