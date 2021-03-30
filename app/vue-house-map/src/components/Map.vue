@@ -30,12 +30,6 @@
           style="margin-left: 5px"
           >测距</el-button
         >
-        <el-button
-          size="small"
-          @click="_onClickTimeQueryTool"
-          style="margin-left: 5px"
-          >通勤</el-button
-        >
       </el-row>
       <el-row style="background-color: white; margin-top: 5px">
         <div>
@@ -51,50 +45,6 @@
           >
         </div>
       </el-row>
-
-      <el-drawer
-        title="通勤时间测算"
-        v-model="drawer"
-        :direction="rtl"
-        :before-close="drawerClose"
-        destroy-on-close
-        style="overflow: scroll"
-      >
-        <el-row>
-          <el-input
-            v-model="input"
-            placeholder="请输入出发地"
-            style="width: 400px; margin-left: 10px"
-          ></el-input>
-          <el-button style="margin-left: 10px" @click="_onClickTimeQuery"
-            >确定</el-button
-          >
-        </el-row>
-
-        <el-card
-          class="box-card"
-          style="margin-top: 20px"
-          v-for="o in destination"
-          body-style="padding:15px;"
-          :key="o"
-        >
-          <template #header>
-            <div class="card-header" style="height: 15px">
-              <span>{{ o.name }}</span>
-            </div>
-          </template>
-          <el-row style="margin-top: -20px">
-            <el-col :span="12">
-              <p>公交</p>
-              <strong :name="o.id">1小时1分钟</strong>
-            </el-col>
-            <el-col :span="12">
-              <p>驾车</p>
-              <strong :name="o.id">54分钟</strong>
-            </el-col>
-          </el-row>
-        </el-card>
-      </el-drawer>
     </div>
   </div>
 </template>
@@ -102,6 +52,7 @@
 <script>
 // @ is an alias to /src
 import AMap from "AMap";
+import { geo } from "../api/api.js";
 //const shellEle = require("electron").shell; // electron shell
 //const Store = require("electron-store");    // electron storage
 
@@ -112,33 +63,6 @@ export default {
       map: null,
       massMarks: null, // 海量点
       ruler: null, // 测距工具
-      drawer: false, // 通勤时间工具
-      destination: [
-        {
-          id: "1",
-          name: "哔哩哔哩",
-          lng: 121.506414,
-          lat: 31.309352,
-        },
-        {
-          id: "2",
-          name: "拼多多",
-          lng: 121.425928,
-          lat: 31.219444,
-        },
-        {
-          id: "3",
-          name: "万达股份",
-          lng: 121.519372,
-          lat: 31.077439,
-        },
-        {
-          id: "4",
-          name: "莉莉丝",
-          lng: 121.39253,
-          lat: 31.170216,
-        },
-      ],
       infoWindow: null,
       infoWindowMarker: null,
       options3: [
@@ -467,14 +391,6 @@ export default {
       if (this.ruler != null) {
         this.ruler.turnOn();
       }
-    },
-    // 通勤
-    _onClickTimeQueryTool() {
-      this.drawer = true;
-    },
-    // 通勤时间查询
-    _onClickTimeQuery() {
-      let _this = this;
     },
     // 通勤时间面板关闭
     drawerClose() {

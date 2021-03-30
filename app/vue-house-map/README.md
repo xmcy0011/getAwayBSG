@@ -10,6 +10,7 @@ use **vue3** , **element-ui-3.x** and **electron11(chrome89)** build cross-platf
 
 1. npm
 ```
+
 ```
 
 2. vue
@@ -71,12 +72,48 @@ $ npm run electron:serve    # 开发模式运行
 $ npm run electron:build    # 部署，编译
 ```
 
+### how to use gaode map in vue3
+
+1. use [JSAPI Loader](https://lbs.amap.com/api/jsapi-v2/guide/abc/load)
+2. [Vue-Cli 3.0 中配置高德地图api](https://blog.csdn.net/weixin_43953710/article/details/101377497)
+
 ### how to use elementui in vue3
 
 vue中如何使用element?
 ```bash
 vue add element # vue-cli use element-ui
 ```
+
+### how to use axios in vue3
+
+see:
+- [vue3.0引入axios](https://blog.csdn.net/u011724770/article/details/114403738)
+- [vue3.0使用axios-二次封装](https://blog.csdn.net/np918/article/details/95018440)
+
+1. mian.js
+```js
+import axios from 'axios'
+import VueAxios from 'vue-axios'
+ 
+createApp(App).use(VueAxios, axios)
+```
+
+2. 使用
+```js
+vue.axios.get(api).then((response) => {
+    console.log(response.data)
+})
+this.axios.get(api).then((response) => { 
+    console.log (response.data)
+})
+this.$http.get(api).then((response) =>{
+    console.log( response.data)
+})
+```
+
+### async and await
+
+see:[Javascript中async与await的用法](https://blog.csdn.net/weixin_42042017/article/details/109472908)
 
 ### install depends by manual
 
