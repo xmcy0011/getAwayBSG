@@ -16,6 +16,14 @@
         >打开excel</el-button
       >
     </el-upload>
+    <el-button
+      size="small"
+      class="overButton"
+      @click="onClickDownload"
+      style="top: 50px"
+      icon="el-icon-download"
+      >下载数据</el-button
+    >
 
     <el-button
       size="small"
@@ -243,6 +251,17 @@ export default {
         // }
       };
       fileReader.readAsBinaryString(files[0]);
+    },
+    // 下载数据
+    onClickDownload() {
+      // 链接: https://pan.baidu.com/s/1PCQnNLw8qsP2XrDfTU19dw  密码: o010
+      this.$alert('<a href="https://pan.baidu.com/s/1PCQnNLw8qsP2XrDfTU19dw" '+
+      'target="_blank">百度网盘</a>&nbsp;&nbsp;<span>密码: o010</span></br>'+
+      '<span>cs：长沙，sh：上海</span></br>'+
+      '<span style="color:MediumSeaGreen;">注意：加载数据请保持在1万条以下</span></br>'+
+      '<span style="color:red;">免责声明⚠️：二手房数据请勿用于商业用途，否则后果自负，与作者无关</span>', "二手房数据下载", {
+        dangerouslyUseHTMLString: true,
+      });
     },
     loadToMap(houseList) {
       var _this = this;
