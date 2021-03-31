@@ -15,6 +15,7 @@
         ref="poiSearchBox"
         v-show="drawer"
         @clickSearch="clickSearch"
+        @clickCopy="clickCopy"
         style="margin-left: 10px; margin-right: 10px"
       />
 
@@ -56,6 +57,7 @@ export default {
   data() {
     return {
       drawer: false, // 通勤时间工具
+      searchResultCopyText: "",
       destination: [
         {
           id: "dest0",
@@ -96,8 +98,51 @@ export default {
     },
     // 点击搜索
     clickSearch(poi) {
+      if (this.$refs.poiSearchBox.search.name == "") {
+        this.$notify({
+          title: "警告",
+          message: "请输入地址",
+          type: "warning",
+          //position: "bottom-right",
+        });
+        return;
+      }
       this.clearLastResult();
       this.directionCalc(this.$refs.poiSearchBox.search.address);
+    },
+    copy(value) {
+      // 动态创建 textarea 标签
+      const textarea = document.createElement("textarea");
+      // 将该 textarea 设为 readonly 防止 iOS 下自动唤起键盘，同时将 textarea 移出可视区域
+      textarea.readOnly = "readonly";
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      // 将要 copy 的值赋给 textarea 标签的 value 属性
+      textarea.value = value;
+      // 将 textarea 插入到 body 中
+      document.body.appendChild(textarea);
+      // 选中值并复制
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      document.execCommand("Copy");
+      document.body.removeChild(textarea);
+    },
+    // 点击拷贝
+    clickCopy() {
+      if (this.searchResultCopyText == "") {
+        this.$notify({
+          title: "警告",
+          message: "请搜索后再进行复制！",
+          type: "warning",
+        });
+        return;
+      }
+      this.copy(this.searchResultCopyText);
+      this.$notify({
+        title: "拷贝到剪贴板成功",
+        dangerouslyUseHTMLString: true,
+        message: "<p>" + this.searchResultCopyText + "</p>",
+      });
     },
     async directionCalc(originAddress) {
       let location = await geo(originAddress);
@@ -115,8 +160,16 @@ export default {
         return text;
       };
 
+      // 出发地：originAddress
+      // 目的地：
+      // bilibili\t公交：xx（）\t驾车：xx（）\n
+      this.searchResultCopyText = "出发地：" + originAddress + "\n目的地：";
+
       for (let i = 0; i < this.destination.length; i++) {
         let dest = this.destination[i].location;
+
+        this.searchResultCopyText += "\n" + this.destination[i].name;
+
         // 公交查询
         let results = await getTransitIntegrated(location, dest, 0);
         if (results.length > 0) {
@@ -132,6 +185,7 @@ export default {
           if (elementArr.length > 0) {
             elementArr[0].innerText = text;
           }
+          this.searchResultCopyText += "\t公交：\t" + text + "\t";
         }
 
         // 驾车
@@ -149,6 +203,7 @@ export default {
           if (elementArr.length > 0) {
             elementArr[1].innerText = text;
           }
+          this.searchResultCopyText += "\t驾车：\t" + text;
         }
       }
     },

@@ -9,7 +9,16 @@
       placeholder="搜索地点"
     >
       <template #append>
-        <el-button icon="el-icon-search" @click="onClickSearch"></el-button>
+        <el-button
+          icon="el-icon-search"
+          @click="onClickSearch"
+          tooltip="搜索"
+        ></el-button>
+        <el-button
+          icon="el-icon-document-copy"
+          style="margin-left: 2px"
+          @click="onClickCopy"
+        ></el-button>
       </template>
     </el-input>
 
@@ -19,7 +28,7 @@
       v-if="isSearch"
       class="box-card"
       id="search-box"
-      style="position: relative; z-index: 15"
+      style="position: relative; z-index: 15; cursor: pointer"
     >
       <dl v-if="isSearchList">
         <dd
@@ -27,7 +36,7 @@
           :key="search.name"
           @click="this.search = search"
         >
-          {{ search.name }}（{{ search.address }}）
+          {{ search.name }} {{ search.address }}）
         </dd>
       </dl>
     </el-card>
@@ -69,6 +78,10 @@ export default {
     // 点击确定按钮
     onClickSearch() {
       this.$emit("clickSearch", this.search);
+    },
+    // 点击拷贝
+    onClickCopy() {
+      this.$emit("clickCopy");
     },
     onSearch() {
       this.searchPoi();
