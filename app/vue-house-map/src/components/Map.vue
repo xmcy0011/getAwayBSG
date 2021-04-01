@@ -35,12 +35,12 @@
         <div>
           <el-checkbox
             v-model="itAreaChecked"
-            @change="_loadItArea(itAreaChecked)"
+            @change="(checked) => _loadItArea(checked)"
             >科技园</el-checkbox
           >
           <el-checkbox
             v-model="itCompanyChecked"
-            @change="_loadItCompany(itCompanyChecked)"
+            @change="(checked) => _loadItCompany(checked)"
             >IT公司</el-checkbox
           >
         </div>
@@ -159,8 +159,8 @@ export default {
 
     setTimeout(() => {
       // 加载著名上海科技园
-      this._loadItArea();
-      this._loadItCompany();
+      this._loadItArea(true);
+      this._loadItCompany(true);
     }, 1 * 1000);
   },
   methods: {
@@ -401,7 +401,7 @@ export default {
       this.map.setMapStyle("amap://styles/" + value);
     },
     // 加载 上海著名IT科技园，张江、漕河泾、五角场、紫竹
-    _loadItArea(add) {
+    _loadItArea(checked) {
       // 121.594377,31.206623 浦东新区张江高科技园区
       // 121.397769,31.170644 徐汇区漕河泾开发区
       // 121.513906,31.304645 杨浦区五角场创智天地
@@ -411,8 +411,8 @@ export default {
       this.itCompanyAreaList.forEach((element) => {
         _this.map.remove(element);
       });
-      this.itCompanyAreaList.slice(0, this.itCompanyAreaList.length); // clear
-      if (add || add == undefined) {
+      this.itCompanyAreaList = []; // clear
+      if (checked) {
         this._addArea(121.594377, 31.206623, "张江高科");
         this._addArea(121.397769, 31.170644, "漕河泾");
         this._addArea(121.513906, 31.304645, "五角场");
@@ -455,13 +455,13 @@ export default {
       this.map.add(circle);
     },
     // 加载，上海著名互联网公司
-    _loadItCompany(add) {
+    _loadItCompany(checked) {
       let _this = this;
       this.itCompanyList.forEach((element) => {
         _this.map.remove(element);
       });
-      this.itCompanyList.slice(0, this.itCompanyList.length); // clear
-      if (add || add == undefined) {
+      this.itCompanyList = []; // clear
+      if (checked) {
         this._addCompany(121.506414, 31.309352, "哔哩哔哩");
         this._addCompany(121.488982, 31.255272, "网易");
         this._addCompany(121.604903, 31.179749, "陆金所");
@@ -520,7 +520,7 @@ export default {
         offset: new AMap.Pixel(-75, -72),
       });
 
-      this.itCompanyAreaList.push(marker);
+      this.itCompanyList.push(marker);
       // 将创建的点标记添加到已有的地图实例：
       this.map.add(marker);
     },

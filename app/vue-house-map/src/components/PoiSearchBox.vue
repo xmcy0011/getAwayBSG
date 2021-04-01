@@ -26,7 +26,6 @@
     <el-card
       @mouseenter="enterSearchBoxHanlder"
       v-if="isSearch"
-      class="box-card"
       id="search-box"
       style="position: relative; z-index: 15; cursor: pointer"
     >
@@ -36,7 +35,8 @@
           :key="search.name"
           @click="this.search = search"
         >
-          {{ search.name }} {{ search.address }}）
+          {{ search.name }}
+          <!-- ({{ search.address }}）-->
         </dd>
       </dl>
     </el-card>
@@ -56,7 +56,7 @@ export default {
   },
   computed: {
     isSearchList() {
-      return this.isFocus && this.search;
+      return this.isFocus && this.search.name != "";
     },
     isSearch() {
       return this.isFocus;
@@ -64,12 +64,16 @@ export default {
   },
   methods: {
     focus() {
+      if (this.search.name != "") {
+        this.searchPoi();
+      }
       this.isFocus = true;
     },
     blur() {
       var self = this;
       this.searchBoxTimeout = setTimeout(function () {
         self.isFocus = false;
+        self.searchList = [{ name: "" }];
       }, 300);
     },
     enterSearchBoxHanlder() {

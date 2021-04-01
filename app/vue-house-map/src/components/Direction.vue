@@ -108,7 +108,7 @@ export default {
         return;
       }
       this.clearLastResult();
-      this.directionCalc(this.$refs.poiSearchBox.search.address);
+      this.directionCalc(this.$refs.poiSearchBox.search.name);
     },
     copy(value) {
       // 动态创建 textarea 标签
