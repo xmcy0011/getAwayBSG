@@ -9,7 +9,6 @@
       :direction="rtl"
       :before-close="drawerClose"
       destroy-on-close
-      style="overflow: scroll"
     >
       <PoiSearchBox
         ref="poiSearchBox"
@@ -19,29 +18,31 @@
         style="margin-left: 10px; margin-right: 10px"
       />
 
-      <el-card
-        class="box-card"
-        style="margin-top: 20px"
-        v-for="o in destination"
-        body-style="padding:15px;"
-        :key="o"
-      >
-        <template #header>
-          <div class="card-header" style="height: 15px">
-            <span>{{ o.name }}</span>
-          </div>
-        </template>
-        <el-row style="margin-top: -20px">
-          <el-col :span="12">
-            <p>公交</p>
-            <p :name="o.id">无</p>
-          </el-col>
-          <el-col :span="12">
-            <p>驾车</p>
-            <p :name="o.id">无</p>
-          </el-col>
-        </el-row>
-      </el-card>
+      <div style="overflow-y: auto; height: 650px">
+        <el-card
+          class="box-card"
+          style="margin-top: 20px"
+          v-for="o in destination"
+          body-style="padding:10px 10px 0px 10px;"
+          :key="o.name"
+        >
+          <template #header>
+            <div class="card-header" style="height: 12px">
+              <span style="margin-top: -5px">{{ o.name }}</span>
+            </div>
+          </template>
+          <el-row style="margin-top: -10px">
+            <el-col :span="12">
+              <p>公交</p>
+              <p :name="o.id">无</p>
+            </el-col>
+            <el-col :span="12">
+              <p>驾车</p>
+              <p :name="o.id">无</p>
+            </el-col>
+          </el-row>
+        </el-card>
+      </div>
     </el-drawer>
   </div>
 </template>
@@ -66,8 +67,8 @@ export default {
         },
         {
           id: "dest1",
-          name: "拼多多",
-          location: "121.425928,31.219444",
+          name: "喜马拉雅",
+          location: "121.62648,31.217651",
         },
         {
           id: "dest2",
@@ -78,6 +79,16 @@ export default {
           id: "dest3",
           name: "莉莉丝",
           location: "121.39253,31.170216",
+        },
+        {
+          id: "dest4",
+          name: "拼多多",
+          location: "121.425928,31.219444",
+        },
+        {
+          id: "dest5",
+          name: "找钢网",
+          location: "121.490393,31.294159",
         },
       ],
     };
@@ -186,6 +197,8 @@ export default {
             elementArr[0].innerText = text;
           }
           this.searchResultCopyText += "\t公交：\t" + text + "\t";
+        } else {
+          console.log("getTransitIntegrated have no result");
         }
 
         // 驾车
@@ -204,6 +217,8 @@ export default {
             elementArr[1].innerText = text;
           }
           this.searchResultCopyText += "\t驾车：\t" + text;
+        } else {
+          console.log("getTransitDriving have no result");
         }
       }
     },
