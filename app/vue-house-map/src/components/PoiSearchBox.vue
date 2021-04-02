@@ -92,7 +92,7 @@ export default {
     },
     // 搜索POI
     async searchPoi() {
-      let pois = await queryPlace(this.search);
+      let pois = await queryPlace(this.search.name);
       console.log(pois);
       this.searchList = pois;
     },
