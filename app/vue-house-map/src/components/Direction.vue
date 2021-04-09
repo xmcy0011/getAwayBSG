@@ -119,7 +119,10 @@ export default {
         return;
       }
       this.clearLastResult();
-      this.directionCalc(this.$refs.poiSearchBox.search.name);
+      this.directionCalc(
+        this.$refs.poiSearchBox.search.name,
+        this.$refs.poiSearchBox.search.location
+      );
     },
     copy(value) {
       // 动态创建 textarea 标签
@@ -155,8 +158,8 @@ export default {
         message: "<p>" + this.searchResultCopyText + "</p>",
       });
     },
-    async directionCalc(originAddress) {
-      let location = await geo(originAddress);
+    async directionCalc(originAddress, location) {
+      //let location = await geo(originAddress);
       console.log("addr=" + originAddress + ",location=" + location);
 
       const getTimeText = function (timeSpan) {

@@ -7,7 +7,7 @@ const kDefaultCity = "shanghai";
 /**
  * 查询POI地址对应的经纬度
  * @export
- * @param {*} address：地址
+ * @param {*} address：结构化地址
  * @returns
  */
 export async function geo(address) {
