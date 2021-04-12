@@ -5,7 +5,7 @@
       <el-row>
         <el-select
           size="small"
-          style="width: 100px"
+          style="width: 100px; margin-left: 92px"
           v-model="curMapStyle"
           placeholder="请选择"
           @change="_mapStyleSelectedChange"
@@ -42,6 +42,11 @@
             v-model="itCompanyChecked"
             @change="(checked) => _loadItCompany(checked)"
             >IT公司</el-checkbox
+          >
+          <el-checkbox
+            v-model="metroChecked"
+            @change="(checked) => _loadMetroList(checked)"
+            >地铁站</el-checkbox
           >
         </div>
       </el-row>
@@ -121,15 +126,17 @@ export default {
       curHouseMarker: null, // 当前激活的房源
       itCompanyAreaList: [], // 上海科技园,
       itCompanyList: [], // 上海It公司
+      metroList: [], // 感兴趣的地铁站
       itAreaChecked: true,
       itCompanyChecked: true,
+      metroChecked: true,
     };
   },
   mounted() {
     this.map = new AMap.Map("map-container", {
       mapStyle: "amap://styles/normal",
-      zoom: 15,
-      center: [121.480331, 31.153403],
+      zoom: 12,
+      center: [121.480331, 31.203403],
     });
     AMap.plugin("AMap.ToolBar", () => {
       // 异步加载插件
@@ -161,6 +168,7 @@ export default {
       // 加载著名上海科技园
       this._loadItArea(true);
       this._loadItCompany(true);
+      this._loadMetroList(true);
     }, 1 * 1000);
   },
   methods: {
@@ -521,6 +529,40 @@ export default {
       });
 
       this.itCompanyList.push(marker);
+      // 将创建的点标记添加到已有的地图实例：
+      this.map.add(marker);
+    },
+    // 加载，感兴趣的地铁站
+    _loadMetroList(checked) {
+      let _this = this;
+      this.metroList.forEach((element) => {
+        _this.map.remove(element);
+      });
+      this.metroList = []; // clear
+      if (checked) {
+        this._addMetro(121.437711, 31.339703, "1号线呼兰路站");
+        this._addMetro(121.69821, 31.186741, "2号线川沙站");
+        this._addMetro(121.373009, 31.344594, "7号线顾村公园");
+        this._addMetro(121.229686, 31.104097, "9号线佘山站");
+        this._addMetro(121.349623, 31.281603, "11号桃浦新村站");
+        this._addMetro(121.530323, 31.047956, "浦江线闵瑞路站");
+      }
+    },
+    _addMetro(lon, lat, title) {
+      // 创建一个 Marker 实例：
+      const content = `<div class="test_triangle_border_2" style="width:90px;">
+                        <div class="popup" style="width:90px;background: #f84d27;">
+                          <em></em><span></span>${title}
+                        </div>
+                       </div>`;
+      let marker = new AMap.Marker({
+        content: content, // 自定义点标记覆盖物内容
+        position: [lon, lat],
+        title: title,
+        offset: new AMap.Pixel(-75, -72),
+      });
+
+      this.metroList.push(marker);
       // 将创建的点标记添加到已有的地图实例：
       this.map.add(marker);
     },
