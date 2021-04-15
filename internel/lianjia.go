@@ -440,7 +440,7 @@ func listCrawler() {
 	}
 }
 
-func crawlerOneDetail(startNum int, routineIndex int, houseArr []HouseInfo, total int) bool {
+func crawlerOneDetail(startNum int, routineIndex int, houseArr []*HouseInfo, total int) bool {
 	c := colly.NewCollector()
 
 	//设置延时
@@ -664,12 +664,25 @@ func crawlerDetail() (bool, error) {
 		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
 		return false, err
 	}
-	var houseArr = make([]HouseInfo, 0)
-	err = cur.All(ctx, &houseArr)
-	if err != nil {
-		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
-		return false, err
+	var houseArr = make([]*HouseInfo, 10*1000)
+	for {
+		if !cur.Next(ctx) {
+			logger.Sugar.Info("查询到 ", len(houseArr), " 条记录")
+			break
+		}
+		item := &HouseInfo{}
+		if err := cur.Decode(item); err != nil {
+			logger.Sugar.Warn("数据库读取失败:", err.Error())
+			break
+		}
+		houseArr = append(houseArr, item)
 	}
+	//err = cur.All(ctx, &houseArr)
+	//if err != nil {
+	//	logger.Sugar.Fatalf("数据库读取失败:", err.Error())
+	//	return false, err
+	//}
+
 	crawlerDetailCount = len(houseArr)
 	crawlerDetailSuccessCount = 0
 	defer cur.Close(ctx)
@@ -680,7 +693,7 @@ func crawlerDetail() (bool, error) {
 	var wg sync.WaitGroup
 	for j := 0; j < routineCount; j++ {
 		perCount := crawlerDetailCount / routineCount
-		var tempHouseArr []HouseInfo
+		var tempHouseArr []*HouseInfo
 		var startCount = j * perCount
 		var endCount int
 		if (j + 1) == routineCount {
@@ -692,7 +705,7 @@ func crawlerDetail() (bool, error) {
 		}
 
 		wg.Add(1)
-		go func(startNum int, routineIndex int, houseArr []HouseInfo) {
+		go func(startNum int, routineIndex int, houseArr []*HouseInfo) {
 			defer wg.Add(-1)
 			// 1协程抓取一组数据
 			ret := crawlerOneDetail(startNum, routineIndex, tempHouseArr, crawlerDetailCount)
