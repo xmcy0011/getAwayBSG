@@ -664,7 +664,7 @@ func crawlerDetail() (bool, error) {
 		logger.Sugar.Fatalf("数据库读取失败:", err.Error())
 		return false, err
 	}
-	var houseArr = make([]HouseInfo, 10*1000)
+	var houseArr = make([]HouseInfo, 0)
 	for {
 		if !cur.Next(ctx) {
 			logger.Sugar.Info("查询到 ", len(houseArr), " 条记录")
