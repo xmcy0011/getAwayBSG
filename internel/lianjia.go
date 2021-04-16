@@ -671,9 +671,9 @@ func crawlerDetail() (bool, error) {
 			break
 		}
 		item := HouseInfo{}
-		if err := cur.Decode(item); err != nil {
+		if err := cur.Decode(&item); err != nil {
 			logger.Sugar.Warn("数据库读取失败:", err.Error())
-			break
+			continue
 		}
 		houseArr = append(houseArr, item)
 	}
